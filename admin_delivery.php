@@ -8,11 +8,12 @@ if (!$admin_id) {
     header('location:login.php');
     exit();
 }
+$type = 'regular';
 
 // Delete Product
 if (isset($_GET['delete'])) {
     $delete_id = $_GET['delete'];
-    $delete_product = $conn->prepare("DELETE FROM products WHERE id = ?");
+    $delete_product = $conn->prepare("DELETE FROM products WHERE id = ? ");
     $delete_product->execute([$delete_id]);
     header('location:admin_delivery.php');
     exit();
@@ -25,7 +26,7 @@ if (isset($_POST['add_product'])) {
     $price = filter_var($_POST['price'], FILTER_VALIDATE_FLOAT);
     $details = filter_var($_POST['details'], FILTER_SANITIZE_STRING);
     $status = filter_var($_POST['status'], FILTER_SANITIZE_STRING);
-    
+
     $image = $_FILES['image']['name'];
     $image_tmp_name = $_FILES['image']['tmp_name'];
     $image_folder = 'uploaded_img/' . $image;
@@ -36,8 +37,8 @@ if (isset($_POST['add_product'])) {
     $image_path = 'uploaded_img/' . $unique_image_name;
 
     if (move_uploaded_file($image_tmp_name, $image_path)) {
-        $insert_product = $conn->prepare("INSERT INTO products (name, category, price, details, status, image) VALUES (?, ?, ?, ?, ?, ?)");
-        $insert_product->execute([$name, $category, $price, $details, $status, $unique_image_name]);
+        $insert_product = $conn->prepare("INSERT INTO products (name, category, price, details, status, image, type) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $insert_product->execute([$name, $category, $price, $details, $status, $unique_image_name, $type]);
         header('location:admin_delivery.php');
         exit();
     }
@@ -55,7 +56,7 @@ if (isset($_POST['update_product'])) {
     // Handle image upload
     $image = $_FILES['image']['name'];
     $image_tmp_name = $_FILES['image']['tmp_name'];
-    
+
     if (!empty($image)) {
         $image_ext = pathinfo($image, PATHINFO_EXTENSION);
         $unique_image_name = 'prod_' . time() . '.' . $image_ext;
@@ -63,14 +64,14 @@ if (isset($_POST['update_product'])) {
         move_uploaded_file($image_tmp_name, $image_path);
 
         // Update with new image
-        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, price=?, details=?, status=?, image=? WHERE id=?");
-        $update_product->execute([$name, $category, $price, $details, $status, $unique_image_name, $update_id]);
+        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, price=?, details=?, status=?, image=?, type=? WHERE id=?");
+        $update_product->execute([$name, $category, $price, $details, $status, $unique_image_name, $type, $update_id]);
     } else {
         // Update without changing image
-        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, price=?, details=?, status=? WHERE id=?");
-        $update_product->execute([$name, $category, $price, $details, $status, $update_id]);
+        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, price=?, details=?, status=?, type=? WHERE id=?");
+        $update_product->execute([$name, $category, $price, $details, $status, $type, $update_id]);
     }
-    
+
     header('location:admin_delivery.php');
     exit();
 }
@@ -105,12 +106,13 @@ if (isset($_POST['save_ingredients'])) {
 
 
 // Fetch all products
-$show_products = $conn->prepare("SELECT * FROM products");
+$show_products = $conn->prepare("SELECT * FROM products WHERE type = 'regular' ORDER BY id DESC");
 $show_products->execute();
 $products = $show_products->fetchAll(PDO::FETCH_ASSOC);
 
 // Check if ingredients are set for a product
-function hasIngredients($product_id) {
+function hasIngredients($product_id)
+{
     global $conn;
     $stmt = $conn->prepare("SELECT * FROM barista_inventory WHERE product_id = ?");
     $stmt->execute([$product_id]);
@@ -120,32 +122,35 @@ function hasIngredients($product_id) {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Online Shop Inventory</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/admin_style.css">
-    
+
     <style>
         :root {
             --table-margin-top: 80px;
         }
-/* Adjust dropdown and search font size */
-.menu-actions select,
-.menu-actions input {
-    font-size: 14px; /* Adjust this value as needed */
-}
 
-/* Make "Manage Menu" title bold */
-.menu-header h2 {
-    font-weight: 700;
-}
+        /* Adjust dropdown and search font size */
+        .menu-actions select,
+        .menu-actions input {
+            font-size: 14px;
+            /* Adjust this value as needed */
+        }
+
+        /* Make "Manage Menu" title bold */
+        .menu-header h2 {
+            font-weight: 700;
+        }
 
         .menu-container {
             padding: 20px;
@@ -308,130 +313,136 @@ function hasIngredients($product_id) {
                 margin: 15px;
             }
         }
+
         .menu-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
 
-.menu-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-left: auto;
-}
-/* Adjust font size in modals */
-.modal-content {
-    font-size: 14px; /* Adjust as needed */
-}
+        .menu-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-left: auto;
+        }
 
-/* Optionally, target specific elements */
-.modal-content label,
-.modal-content input,
-.modal-content select,
-.modal-content textarea,
-.modal-content button {
-    font-size: 14px; /* Keep it consistent */
-}
-.edit-btn.has-ingredients {
-    color: #4CAF50;
-}
+        /* Adjust font size in modals */
+        .modal-content {
+            font-size: 14px;
+            /* Adjust as needed */
+        }
 
+        /* Optionally, target specific elements */
+        .modal-content label,
+        .modal-content input,
+        .modal-content select,
+        .modal-content textarea,
+        .modal-content button {
+            font-size: 14px;
+            /* Keep it consistent */
+        }
 
-
+        .edit-btn.has-ingredients {
+            color: #4CAF50;
+        }
     </style>
 </head>
+
 <body>
     <?php include 'admin_header.php'; ?>
 
     <div class="menu-container">
-    <div class="menu-header">
-        <h2>Manage Menu</h2>
-        <div class="menu-actions">
-            <select id="categoryFilter">
-                <option value="">All Categories</option>
-                <option value="Frappe">Frappe</option>
-                <option value="Fruit Soda">Fruit Soda</option>
-                <option value="Frappe Extreme">Frappe Extreme</option>
-                <option value="Milk Tea">Milk Tea</option>
-                <option value="Fruit Tea">Fruit Tea</option>
-                <option value="Fruit Milk">Fruit Milk</option>
-                <option value="Espresso">Espresso</option>
-                <option value="Hot Non-Coffee">Hot Non-Coffee</option>
-                <option value="Iced Non-Coffee">Iced Non-Coffee</option>
-                <option value="Meal">Meal</option>
-                <option value="Snacks">Snacks</option>
-                <option value="Add-ons">Add-ons</option>
-            </select>
-            <input type="text" id="searchInput" placeholder="Search menu items...">
-            <button class="add-btn" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                + Add New Item
-            </button>
+        <div class="menu-header">
+            <h2>Manage Menu</h2>
+            <div class="menu-actions">
+                <select id="categoryFilter">
+                    <option value="">All Categories</option>
+                    <option value="Frappe">Frappe</option>
+                    <option value="Fruit Soda">Fruit Soda</option>
+                    <option value="Frappe Extreme">Frappe Extreme</option>
+                    <option value="Milk Tea">Milk Tea</option>
+                    <option value="Fruit Tea">Fruit Tea</option>
+                    <option value="Fruit Milk">Fruit Milk</option>
+                    <option value="Espresso">Espresso</option>
+                    <option value="Hot Non-Coffee">Hot Non-Coffee</option>
+                    <option value="Iced Non-Coffee">Iced Non-Coffee</option>
+                    <option value="Meal">Meal</option>
+                    <option value="Snacks">Snacks</option>
+                    <option value="Add-ons">Add-ons</option>
+                </select>
+                <input type="text" id="searchInput" placeholder="Search menu items...">
+                <button class="add-btn" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                    + Add New Item
+                </button>
+            </div>
         </div>
+
+        <table class="menu-table">
+            <thead>
+                <tr>
+                    <th>ITEM</th>
+                    <th>CATEGORY</th>
+                    <th>PRICE</th>
+                    <th>STATUS</th>
+                    <th>ACTIONS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (!empty($products)): ?>
+                    <?php foreach ($products as $product): ?>
+                        <tr data-category="<?= htmlspecialchars($product['category']); ?>">
+                            <td class="item-col">
+                                <img src="uploaded_img/<?= htmlspecialchars($product['image']); ?>"
+                                    alt="<?= htmlspecialchars($product['name']); ?>">
+                                <div>
+                                    <strong><?= htmlspecialchars($product['name']); ?></strong>
+                                    <p><?= htmlspecialchars($product['details']); ?></p>
+                                </div>
+                            </td>
+                            <td><span class="tag"><?= htmlspecialchars($product['category']); ?></span></td>
+                            <td>₱<?= htmlspecialchars($product['price']); ?></td>
+                            <td>
+                                <span
+                                    class="status-tag <?= $product['status'] === 'active' ? 'status-active' : 'status-inactive' ?>">
+                                    <?= ucfirst($product['status']) ?>
+                                </span>
+                            </td>
+                            <td>
+                                <a href="#" class="edit edit-btn" data-id="<?= $product['id']; ?>"
+                                    data-name="<?= htmlspecialchars($product['name']); ?>"
+                                    data-category="<?= htmlspecialchars($product['category']); ?>"
+                                    data-details="<?= htmlspecialchars($product['details']); ?>"
+                                    data-price="<?= htmlspecialchars($product['price']); ?>"
+                                    data-status="<?= htmlspecialchars($product['status']); ?>"
+                                    data-image="uploaded_img/<?= htmlspecialchars($product['image']); ?>" data-bs-toggle="modal"
+                                    data-bs-target="#updateProductModal">
+                                    Edit
+                                </a>
+                                <a href="admin_set_ingredients.php?id=<?= $product['id']; ?>" class="edit edit-btn 
+                                <?= hasIngredients($product['id']) ? 'has-ingredients' : ''; ?>">
+                                    Ingredients
+                                </a>
+                                <a href="admin_delivery.php?delete=<?= $product['id']; ?>" class="delete"
+                                    onclick="return confirm('Delete this product?');">
+                                    Delete
+                                </a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="5" class="text-center">No products added yet!</td>
+                    </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
     </div>
 
-    <table class="menu-table">
-        <thead>
-            <tr>
-                <th>ITEM</th>
-                <th>CATEGORY</th>
-                <th>PRICE</th>
-                <th>STATUS</th>
-                <th>ACTIONS</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (!empty($products)): ?>
-                <?php foreach ($products as $product): ?>
-                    <tr data-category="<?= htmlspecialchars($product['category']); ?>">
-                        <td class="item-col">
-                            <img src="uploaded_img/<?= htmlspecialchars($product['image']); ?>" alt="<?= htmlspecialchars($product['name']); ?>">
-                            <div>
-                                <strong><?= htmlspecialchars($product['name']); ?></strong>
-                                <p><?= htmlspecialchars($product['details']); ?></p>
-                            </div>
-                        </td>
-                        <td><span class="tag"><?= htmlspecialchars($product['category']); ?></span></td>
-                        <td>₱<?= htmlspecialchars($product['price']); ?></td>
-                        <td>
-                            <span class="status-tag <?= $product['status'] === 'active' ? 'status-active' : 'status-inactive' ?>">
-                                <?= ucfirst($product['status']) ?>
-                            </span>
-                        </td>
-                        <td>
-                            <a href="#" class="edit edit-btn"
-                                data-id="<?= $product['id']; ?>"
-                                data-name="<?= htmlspecialchars($product['name']); ?>"
-                                data-category="<?= htmlspecialchars($product['category']); ?>"
-                                data-details="<?= htmlspecialchars($product['details']); ?>"
-                                data-price="<?= htmlspecialchars($product['price']); ?>"
-                                data-status="<?= htmlspecialchars($product['status']); ?>"
-                                data-image="uploaded_img/<?= htmlspecialchars($product['image']); ?>"
-                                data-bs-toggle="modal" data-bs-target="#updateProductModal">
-                                Edit
-                            </a>
-                            <a href="admin_set_ingredients.php?id=<?= $product['id']; ?>" class="edit edit-btn 
-                                <?= hasIngredients($product['id']) ? 'has-ingredients' : ''; ?>">
-                                Ingredients
-                            </a>
-                            <a href="admin_delivery.php?delete=<?= $product['id']; ?>" class="delete" onclick="return confirm('Delete this product?');">
-                                Delete
-                            </a>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <tr>
-                    <td colspan="5" class="text-center">No products added yet!</td>
-                </tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
-
     <!-- Add Product Modal -->
-    <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -441,7 +452,8 @@ function hasIngredients($product_id) {
                 <div class="modal-body">
                     <form action="" method="POST" enctype="multipart/form-data">
                         <label>Product Name</label>
-                        <input type="text" name="name" class="form-control mb-2" required placeholder="Enter product name">
+                        <input type="text" name="name" class="form-control mb-2" required
+                            placeholder="Enter product name">
 
                         <label>Category</label>
                         <select name="category" class="form-control mb-2" required>
@@ -461,19 +473,22 @@ function hasIngredients($product_id) {
                         </select>
 
                         <label>Price</label>
-                        <input type="number" min="0" name="price" class="form-control mb-2" required placeholder="Enter product price">
+                        <input type="number" min="0" name="price" class="form-control mb-2" required
+                            placeholder="Enter product price">
 
                         <label>Description</label>
-                        <textarea name="details" class="form-control mb-2" required placeholder="Enter product description"></textarea>
-                        
+                        <textarea name="details" class="form-control mb-2" required
+                            placeholder="Enter product description"></textarea>
+
                         <label>Status</label>
                         <select name="status" class="form-control mb-2" required>
                             <option value="active" selected>Active</option>
                             <option value="inactive">Inactive</option>
                         </select>
-                        
+
                         <label>Image</label>
-                        <input type="file" name="image" required class="form-control mb-2" accept="image/jpg, image/jpeg, image/png">
+                        <input type="file" name="image" required class="form-control mb-2"
+                            accept="image/jpg, image/jpeg, image/png">
 
                         <div class="modal-buttons">
                             <button type="submit" class="save-btn" name="add_product">Save</button>
@@ -486,7 +501,8 @@ function hasIngredients($product_id) {
     </div>
 
     <!-- Update Product Modal -->
-    <div class="modal fade" id="updateProductModal" tabindex="-1" aria-labelledby="updateProductModalLabel" aria-hidden="true">
+    <div class="modal fade" id="updateProductModal" tabindex="-1" aria-labelledby="updateProductModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -521,7 +537,7 @@ function hasIngredients($product_id) {
 
                         <label>Description</label>
                         <textarea name="details" id="update_details" class="form-control mb-2" required></textarea>
-                        
+
                         <label>Status</label>
                         <select name="status" id="update_status" class="form-control mb-2" required>
                             <option value="active">Active</option>
@@ -532,7 +548,8 @@ function hasIngredients($product_id) {
                         <img id="update_image" src="" class="img-fluid mb-2" style="max-height: 150px; display: block;">
 
                         <label>New Image (Leave blank to keep current)</label>
-                        <input type="file" name="image" class="form-control mb-2" accept="image/jpg, image/jpeg, image/png">
+                        <input type="file" name="image" class="form-control mb-2"
+                            accept="image/jpg, image/jpeg, image/png">
 
                         <div class="modal-buttons">
                             <button type="submit" class="save-btn" name="update_product">Update</button>
@@ -544,49 +561,50 @@ function hasIngredients($product_id) {
         </div>
     </div>
 
-    <div class="modal fade" id="ingredientsModal" tabindex="-1" aria-labelledby="ingredientsModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Manage Ingredients</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form method="POST" action="">
-        <div class="modal-body">
-          <input type="hidden" name="product_id" id="ingredients_product_id">
-          <div class="form-group">
-            <label>Select Ingredients:</label>
-            <?php
-            $stmt = $conn->prepare("SELECT id, name FROM ingredients ORDER BY name ASC");
-            $stmt->execute();
-            $ingredientOptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($ingredientOptions as $ingredient) {
-                echo '<div class="form-check">
+    <div class="modal fade" id="ingredientsModal" tabindex="-1" aria-labelledby="ingredientsModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Manage Ingredients</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="">
+                    <div class="modal-body">
+                        <input type="hidden" name="product_id" id="ingredients_product_id">
+                        <div class="form-group">
+                            <label>Select Ingredients:</label>
+                            <?php
+                            $stmt = $conn->prepare("SELECT id, name FROM ingredients ORDER BY name ASC");
+                            $stmt->execute();
+                            $ingredientOptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                            foreach ($ingredientOptions as $ingredient) {
+                                echo '<div class="form-check">
                         <input class="form-check-input" type="checkbox" name="ingredients[]" value="' . $ingredient['id'] . '" id="ing_' . $ingredient['id'] . '">
                         <label class="form-check-label" for="ing_' . $ingredient['id'] . '">' . htmlspecialchars($ingredient['name']) . '</label>
                       </div>';
-            }
-            ?>
-          </div>
+                            }
+                            ?>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" name="save_ingredients" class="edit edit-btn">Save</button>
+                        <button type="button" class="delete" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
         </div>
-        <div class="modal-footer">
-          <button type="submit" name="save_ingredients" class="edit edit-btn">Save</button>
-          <button type="button" class="delete" data-bs-dismiss="modal">Cancel</button>
-        </div>
-      </form>
     </div>
-  </div>
-</div>
 
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("DOMContentLoaded", function () {
             // Populate update modal with product data
             document.querySelectorAll(".edit-btn").forEach(button => {
-                button.addEventListener("click", function() {
+                button.addEventListener("click", function () {
                     document.getElementById("update_id").value = this.dataset.id;
                     document.getElementById("update_name").value = this.dataset.name;
                     document.getElementById("update_category").value = this.dataset.category;
@@ -598,7 +616,7 @@ function hasIngredients($product_id) {
             });
 
             // Category filter functionality
-            document.getElementById("categoryFilter").addEventListener("change", function() {
+            document.getElementById("categoryFilter").addEventListener("change", function () {
                 const selectedCategory = this.value;
                 const rows = document.querySelectorAll(".menu-table tbody tr");
 
@@ -633,7 +651,7 @@ function hasIngredients($product_id) {
             });
 
             // Search functionality
-            document.getElementById("searchInput").addEventListener("input", function() {
+            document.getElementById("searchInput").addEventListener("input", function () {
                 const searchTerm = this.value.toLowerCase();
                 const rows = document.querySelectorAll(".menu-table tbody tr");
 
@@ -651,4 +669,5 @@ function hasIngredients($product_id) {
         });
     </script>
 </body>
+
 </html>

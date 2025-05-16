@@ -40,11 +40,10 @@ if(!isset($admin_id)){
       <div class="box">
       <?php
          $total_pendings = 0;
-         $select_pendings = $conn->prepare("SELECT * FROM `orders` WHERE payment_status = ?");
+         $select_pendings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_price FROM order_products op JOIN orders o ON op.order_id = o.id WHERE payment_status = ?");
          $select_pendings->execute(['pending']);
-         while($fetch_pendings = $select_pendings->fetch(PDO::FETCH_ASSOC)){
-            $total_pendings += $fetch_pendings['total_price'];
-         };
+         $fetch_pendings = $select_pendings->fetch(PDO::FETCH_ASSOC);
+         $total_pendings = $fetch_pendings['total_price'] ?? 0;
       ?>
       <h3>₱<?= $total_pendings; ?></h3>
       <p>total pendings</p>
@@ -54,11 +53,10 @@ if(!isset($admin_id)){
       <div class="box">
       <?php
          $total_completed = 0;
-         $select_completed = $conn->prepare("SELECT * FROM `orders` WHERE payment_status = ?");
+         $select_completed = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_price FROM order_products op JOIN orders o ON op.order_id = o.id WHERE payment_status = ?");
          $select_completed->execute(['completed']);
-         while($fetch_completed = $select_completed->fetch(PDO::FETCH_ASSOC)){
-            $total_completed += $fetch_completed['total_price'];
-         };
+         $fetch_completed = $select_completed->fetch(PDO::FETCH_ASSOC);
+         $total_completed = $fetch_completed['total_price'] ?? 0;
       ?>
       <h3>₱<?= $total_completed; ?></h3>
       <p>completed orders</p>

@@ -13,7 +13,7 @@ if (!$admin_id) {
 if (isset($_GET['delete'])) {
     $delete_id = $_GET['delete'];
 
-    $delete_product = $conn->prepare("DELETE FROM online_product WHERE prod_id = ?");
+    $delete_product = $conn->prepare("DELETE FROM products WHERE id = ? AND type = 'online'");
     $delete_product->execute([$delete_id]);
 
     header('location:admin_inventory.php');
@@ -22,42 +22,38 @@ if (isset($_GET['delete'])) {
 
 // Add Product
 if (isset($_POST['add_product'])) {
-    $prod_name = filter_var($_POST['prod_name'], FILTER_SANITIZE_STRING);
-    $category = filter_var($_POST['category'], FILTER_SANITIZE_STRING);
-    $prod_price = filter_var($_POST['prod_price'], FILTER_VALIDATE_FLOAT);
+    $name = htmlspecialchars($_POST['name'], ENT_QUOTES, 'UTF-8');
+    $category = htmlspecialchars($_POST['category'], ENT_QUOTES, 'UTF-8');
+    $price = filter_var($_POST['price'], FILTER_VALIDATE_FLOAT);
     $stock = filter_var($_POST['stock'], FILTER_VALIDATE_INT);
-    $prod_description = filter_var($_POST['prod_description'], FILTER_SANITIZE_STRING);
-  
+    $details = htmlspecialchars($_POST['details'], ENT_QUOTES, 'UTF-8');
+    $status = 'active'; // Default status for new products
+    $type = 'online'; // Default type for this page
 
-    $image = $_FILES['prod_image']['name'];
-    $image_tmp_name = $_FILES['prod_image']['tmp_name'];
-    $image_folder = 'uploaded_img/' . $image;
-
-    // Ensure unique file name
+    $image = $_FILES['image']['name'];
+    $image_tmp_name = $_FILES['image']['tmp_name'];
     $image_ext = pathinfo($image, PATHINFO_EXTENSION);
     $unique_image_name = 'prod_' . time() . '.' . $image_ext;
-    $image_path = 'uploaded_img/' . $unique_image_name;
+    $image_path = "uploaded_img/{$unique_image_name}";
 
     if (move_uploaded_file($image_tmp_name, $image_path)) {
-        $insert_product = $conn->prepare("INSERT INTO online_product (prod_name, category, prod_price, stock, prod_description, prod_image) VALUES (?, ?, ?, ?, ?, ?)");
-        $insert_product->execute([$prod_name, $category, $prod_price, $stock, $prod_description, $unique_image_name]);
+        $insert_product = $conn->prepare("INSERT INTO products (name, category, details, price, status, type, stock, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $insert_product->execute([$name, $category, $details, $price, $status, $type, $stock, $unique_image_name]);
     }
 }
 
+// Update Product
 if (isset($_POST['update_product'])) {
     $update_id = $_POST['update_id'];
-    $prod_name = filter_var($_POST['prod_name'], FILTER_SANITIZE_STRING);
-    $category = filter_var($_POST['category'], FILTER_SANITIZE_STRING);
-    $prod_price = filter_var($_POST['prod_price'], FILTER_VALIDATE_FLOAT);
+    $name = htmlspecialchars($_POST['name'], ENT_QUOTES, 'UTF-8');
+    $category = htmlspecialchars($_POST['category'], ENT_QUOTES, 'UTF-8');
+    $price = filter_var($_POST['price'], FILTER_VALIDATE_FLOAT);
     $stock = filter_var($_POST['stock'], FILTER_VALIDATE_INT);
-    $prod_description = filter_var($_POST['prod_description'], FILTER_SANITIZE_STRING);
- 
-    $status = filter_var($_POST['status'], FILTER_SANITIZE_STRING);
+    $details = htmlspecialchars($_POST['details'], ENT_QUOTES, 'UTF-8');
+    $status = htmlspecialchars($_POST['status'], ENT_QUOTES, 'UTF-8');
 
-    // Handle image upload
-    $image = $_FILES['prod_image']['name'];
-    $image_tmp_name = $_FILES['prod_image']['tmp_name'];
-    $image_folder = 'uploaded_img/' . $image;
+    $image = $_FILES['image']['name'];
+    $image_tmp_name = $_FILES['image']['tmp_name'];
 
     if (!empty($image)) {
         $image_ext = pathinfo($image, PATHINFO_EXTENSION);
@@ -66,12 +62,12 @@ if (isset($_POST['update_product'])) {
         move_uploaded_file($image_tmp_name, $image_path);
 
         // Update query with image
-        $update_product = $conn->prepare("UPDATE online_product SET prod_name=?, category=?, prod_price=?, stock=?, prod_description=?, prod_image=? WHERE prod_id=?");
-        $update_product->execute([$prod_name, $category, $prod_price, $stock, $prod_description, $$unique_image_name, $update_id]);
+        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, details=?, price=?, status=?, stock=?, image=? WHERE id=? AND type='online'");
+        $update_product->execute([$name, $category, $details, $price, $status, $stock, $unique_image_name, $update_id]);
     } else {
         // Update query without image
-        $update_product = $conn->prepare("UPDATE online_product SET prod_name=?, category=?, prod_price=?, stock=?, prod_description=? WHERE prod_id=?");
-        $update_product->execute([$prod_name, $category, $prod_price, $stock, $prod_description, $update_id]);
+        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, details=?, price=?, status=?, stock=? WHERE id=? AND type='online'");
+        $update_product->execute([$name, $category, $details, $price, $status, $stock, $update_id]);
     }
 
     header('location:admin_inventory.php');
@@ -133,42 +129,42 @@ if (isset($_POST['update_product'])) {
             </thead>
             <tbody>
                 <?php
-                $show_products = $conn->prepare("SELECT * FROM online_product");
+                $show_products = $conn->prepare("SELECT * FROM products WHERE type = 'online' ORDER BY id DESC");
                 $show_products->execute();
                 if ($show_products->rowCount() > 0) {
                     while ($fetch_products = $show_products->fetch(PDO::FETCH_ASSOC)) {
-                ?>
+                        ?>
                         <tr data-category="<?= htmlspecialchars($fetch_products['category']); ?>">
                             <td class="item-col">
-                                <img src="uploaded_img/<?= htmlspecialchars($fetch_products['prod_image']); ?>" alt="<?= htmlspecialchars($fetch_products['prod_name']); ?>">
+                                <img src="uploaded_img/<?= htmlspecialchars($fetch_products['image']); ?>"
+                                    alt="<?= htmlspecialchars($fetch_products['name']); ?>">
                                 <div>
-                                    <strong><?= htmlspecialchars($fetch_products['prod_name']); ?></strong>
-                                    <p><?= htmlspecialchars($fetch_products['prod_description']); ?></p>
+                                    <strong><?= htmlspecialchars($fetch_products['name']); ?></strong>
+                                    <p><?= htmlspecialchars($fetch_products['details']); ?></p>
                                 </div>
                             </td>
                             <td><span class="tag"><?= htmlspecialchars($fetch_products['category']); ?></span></td>
-                            <td>₱<?= htmlspecialchars($fetch_products['prod_price']); ?></td>
+                            <td>₱<?= htmlspecialchars($fetch_products['price']); ?></td>
                             <td><?= htmlspecialchars($fetch_products['stock']); ?></td>
-                            
+
                             <td>
-                                <a href="#" class="edit edit-btn" 
-                                    data-id="<?= $fetch_products['prod_id']; ?>"
-                                    data-name="<?= htmlspecialchars($fetch_products['prod_name']); ?>"
+                                <a href="#" class="edit edit-btn" data-id="<?= $fetch_products['id']; ?>"
+                                    data-name="<?= htmlspecialchars($fetch_products['name']); ?>"
                                     data-category="<?= htmlspecialchars($fetch_products['category']); ?>"
-                                    data-description="<?= htmlspecialchars($fetch_products['prod_description']); ?>"
-                                    data-price="<?= htmlspecialchars($fetch_products['prod_price']); ?>"
+                                    data-details="<?= htmlspecialchars($fetch_products['details']); ?>"
+                                    data-price="<?= htmlspecialchars($fetch_products['price']); ?>"
                                     data-stock="<?= htmlspecialchars($fetch_products['stock']); ?>"
-                                   
-                                    data-image="uploaded_img/<?= htmlspecialchars($fetch_products['prod_image']); ?>"
+                                    data-image="uploaded_img/<?= htmlspecialchars($fetch_products['image']); ?>"
                                     data-bs-toggle="modal" data-bs-target="#updateProductModal">
                                     Edit
                                 </a>
-                                <a href="admin_inventory.php?delete=<?= $fetch_products['prod_id']; ?>" class="delete" onclick="return confirm('Delete this product?');">
+                                <a href="admin_inventory.php?delete=<?= $fetch_products['id']; ?>" class="delete"
+                                    onclick="return confirm('Delete this product?');">
                                     Delete
                                 </a>
                             </td>
                         </tr>
-                <?php
+                        <?php
                     }
                 } else {
                     echo '<tr><td colspan="6" class="text-center">No products added yet!</td></tr>';
@@ -179,7 +175,8 @@ if (isset($_POST['update_product'])) {
     </div>
 
     <!-- Add Product Modal -->
-    <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -189,7 +186,8 @@ if (isset($_POST['update_product'])) {
                 <div class="modal-body">
                     <form action="" method="POST" enctype="multipart/form-data">
                         <label>Product Name</label>
-                        <input type="text" name="prod_name" class="form-control mb-2" required placeholder="Enter product name">
+                        <input type="text" name="name" class="form-control mb-2" required
+                            placeholder="Enter product name">
 
                         <label>Category</label>
                         <select name="category" class="form-control mb-2" required>
@@ -206,17 +204,20 @@ if (isset($_POST['update_product'])) {
                         </select>
 
                         <label>Price</label>
-                        <input type="number" min="0" name="prod_price" class="form-control mb-2" required placeholder="Enter product price">
+                        <input type="number" min="0" name="price" class="form-control mb-2" required
+                            placeholder="Enter product price">
 
                         <label>Stock Quantity</label>
-                        <input type="number" min="0" name="stock" class="form-control mb-2" required placeholder="Enter stock quantity">
+                        <input type="number" min="0" name="stock" class="form-control mb-2" required
+                            placeholder="Enter stock quantity">
 
                         <label>Description</label>
-                        <textarea name="prod_description" class="form-control mb-2" required placeholder="Enter product description"></textarea>
-                        
-                    
+                        <textarea name="details" class="form-control mb-2" required
+                            placeholder="Enter product description"></textarea>
+
                         <label>Image</label>
-                        <input type="file" name="prod_image" required class="form-control mb-2" accept="image/jpg, image/jpeg, image/png">
+                        <input type="file" name="image" required class="form-control mb-2"
+                            accept="image/jpg, image/jpeg, image/png">
 
                         <div class="modal-buttons">
                             <button type="submit" class="save-btn" name="add_product">Save</button>
@@ -229,7 +230,8 @@ if (isset($_POST['update_product'])) {
     </div>
 
     <!-- Update Product Modal -->
-    <div class="modal fade" id="updateProductModal" tabindex="-1" aria-labelledby="updateProductModalLabel" aria-hidden="true">
+    <div class="modal fade" id="updateProductModal" tabindex="-1" aria-labelledby="updateProductModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -239,9 +241,9 @@ if (isset($_POST['update_product'])) {
                 <div class="modal-body">
                     <form action="" method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="update_id" id="update_id">
-                        
+
                         <label>Product Name</label>
-                        <input type="text" name="prod_name" id="update_name" class="form-control mb-2" required>
+                        <input type="text" name="name" id="update_name" class="form-control mb-2" required>
 
                         <label>Category</label>
                         <select name="category" id="update_category" class="form-control mb-2" required>
@@ -257,22 +259,20 @@ if (isset($_POST['update_product'])) {
                         </select>
 
                         <label>Price</label>
-                        <input type="number" min="0" name="prod_price" id="update_price" class="form-control mb-2" required>
+                        <input type="number" min="0" name="price" id="update_price" class="form-control mb-2" required>
 
                         <label>Stock Quantity</label>
                         <input type="number" min="0" name="stock" id="update_stock" class="form-control mb-2" required>
 
-                      
-
                         <label>Description</label>
-                        <textarea name="prod_description" id="update_description" class="form-control mb-2" required></textarea>
-                        
-                       
+                        <textarea name="details" id="update_details" class="form-control mb-2" required></textarea>
+
                         <label>Current Image</label>
                         <img id="update_image" src="" class="img-fluid mb-2" style="max-height: 150px; display: block;">
-                        
+
                         <label>New Image (Leave blank to keep current)</label>
-                        <input type="file" name="prod_image" class="form-control mb-2" accept="image/jpg, image/jpeg, image/png">
+                        <input type="file" name="image" class="form-control mb-2"
+                            accept="image/jpg, image/jpeg, image/png">
 
                         <div class="modal-buttons">
                             <button type="submit" class="save-btn" name="update_product">Update</button>
@@ -526,27 +526,25 @@ if (isset($_POST['update_product'])) {
 
     </style>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("DOMContentLoaded", function () {
             // Populate update modal with product data
             document.querySelectorAll(".edit-btn").forEach(button => {
-                button.addEventListener("click", function() {
+                button.addEventListener("click", function () {
                     document.getElementById("update_id").value = this.dataset.id;
                     document.getElementById("update_name").value = this.dataset.name;
                     document.getElementById("update_category").value = this.dataset.category;
                     document.getElementById("update_price").value = this.dataset.price;
                     document.getElementById("update_stock").value = this.dataset.stock;
-                   
-                    document.getElementById("update_description").value = this.dataset.description;
-                   
+                    document.getElementById("update_details").value = this.dataset.details;
                     document.getElementById("update_image").src = this.dataset.image;
                 });
             });
 
             // Category filter functionality
-            document.getElementById("categoryFilter").addEventListener("change", function() {
+            document.getElementById("categoryFilter").addEventListener("change", function () {
                 const selectedCategory = this.value;
                 const rows = document.querySelectorAll(".menu-table tbody tr");
-                
+
                 rows.forEach(row => {
                     if (selectedCategory === "" || row.dataset.category === selectedCategory) {
                         row.style.display = "";
@@ -557,14 +555,14 @@ if (isset($_POST['update_product'])) {
             });
 
             // Search functionality
-            document.getElementById("searchInput").addEventListener("input", function() {
+            document.getElementById("searchInput").addEventListener("input", function () {
                 const searchTerm = this.value.toLowerCase();
                 const rows = document.querySelectorAll(".menu-table tbody tr");
-                
+
                 rows.forEach(row => {
                     const itemName = row.querySelector(".item-col strong").textContent.toLowerCase();
                     const itemDesc = row.querySelector(".item-col p").textContent.toLowerCase();
-                    
+
                     if (itemName.includes(searchTerm) || itemDesc.includes(searchTerm)) {
                         row.style.display = "";
                     } else {
@@ -580,4 +578,5 @@ if (isset($_POST['update_product'])) {
         });
     </script>
 </body>
+
 </html>

@@ -2,6 +2,7 @@
 @include 'config.php';
 session_start();
 
+// var_dump($_POST['ingredients']);
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ingredients'])) {
     try {
         $conn->beginTransaction();

@@ -18,9 +18,30 @@ if (!$order_id) {
 }
 
 // Fetch the order data from the database
-$stmt = $conn->prepare("SELECT * FROM `orders` WHERE id = ?");
-$stmt->execute([$order_id]);
-$order = $stmt->fetch(PDO::FETCH_ASSOC);
+// Fetch order details using PDO
+$select_orders = $conn->prepare("
+    SELECT 
+        o.id AS order_id,
+        o.name,
+        o.email,
+        o.placed_on,
+        o.payment_status,
+        o.type,
+        o.method,
+        o.address,
+        o.cashier,
+        o.number,
+
+        GROUP_CONCAT(op.product_id) AS product_ids,
+        (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
+    FROM `orders` o 
+    LEFT JOIN `order_products` op ON o.id = op.order_id
+    WHERE o.id = ?
+    GROUP BY o.id
+");
+$select_orders->bindParam(1, $order_id, PDO::PARAM_INT);
+$select_orders->execute();
+$order = $select_orders->fetch(PDO::FETCH_ASSOC);
 
 // Check if the order exists
 if (!$order) {
@@ -37,36 +58,38 @@ if (empty($order['receipt'])) {
         exit;
     }
 
-    // Get the product data from the order
-    $total_products = explode(', ', $order['total_products']); // Example: ["yaya (1)", "yaya (1)"]
+    $product_ids = explode(',', $order['product_ids']);
+
 
     // Array to hold aggregated product data
     $products_data = [];
 
     // Loop through and aggregate product quantities
-    foreach ($total_products as $item) {
-        // Handle product name and quantity extraction, even with spacing issues
-        if (preg_match('/(.*)\s?\(\s*(\d+)\s*\)/', trim($item), $matches)) { 
-            $product_name = trim($matches[1]); // Trim any extra spaces around the product name
-            $product_qty = (int)$matches[2];  // Get the product quantity as an integer
+    foreach ($product_ids as $product) {
 
-            // If this product is already in the array, update its quantity
-            if (isset($products_data[$product_name])) {
-                $products_data[$product_name]['qty'] += $product_qty;
-            } else {
-                // Fetch price from the database for the first time the product is seen
-                $product_stmt = $conn->prepare("SELECT name, price FROM products WHERE name = ?");
-                $product_stmt->execute([$product_name]);
-                $product_data = $product_stmt->fetch(PDO::FETCH_ASSOC);
+        // Fetch product details
+        $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
+        $select_product->bindParam(1, $product, PDO::PARAM_INT);
+        $select_product->execute();
+        $product_details = $select_product->fetch(PDO::FETCH_ASSOC);
 
-                $price = $product_data ? $product_data['price'] : 0;
-
-                $products_data[$product_name] = [
-                    'name' => $product_name,
-                    'qty' => $product_qty,
-                    'price' => $price
-                ];
-            }
+        if ($product_details) {
+            // Fetch ingredients for the product
+            $product_id = $product_details['id'];
+            
+            // get the price and quantity of the product
+            $select_order_products = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ? AND product_id = ?");
+            $select_order_products->bindParam(1, $order_id, PDO::PARAM_INT);
+            $select_order_products->bindParam(2, $product_id, PDO::PARAM_INT);
+            $select_order_products->execute();
+            $order_product = $select_order_products->fetch(PDO::FETCH_ASSOC);
+            $product_details['price'] = $order_product['price'];
+            $product_details['quantity'] = $order_product['quantity'];
+            $products_data[] = [
+                'name' => $product_details['name'],
+                'price' => $product_details['price'],
+                'qty' => $product_details['quantity'],
+            ];
         }
     }
 

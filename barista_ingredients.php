@@ -5,76 +5,96 @@ session_start();
 // Check if the admin is logged in
 $admin_id = $_SESSION['barista_id'];
 if (!isset($admin_id)) {
-    header('location:login.php');
-    exit();
+  header('location:login.php');
+  exit();
 }
 
 // Get the order_id from the URL
 $order_id = $_GET['order_id'];
 
 // Fetch order details using PDO
-$order_sql = "SELECT * FROM orders WHERE id = ?";
-$stmt = $conn->prepare($order_sql);
-$stmt->bindParam(1, $order_id, PDO::PARAM_INT);
-$stmt->execute();
-$order = $stmt->fetch(PDO::FETCH_ASSOC);
+$select_orders = $conn->prepare("
+    SELECT 
+        o.id AS order_id,
+        o.name,
+        o.email,
+        o.placed_on,
+        o.payment_status,
+        o.type,
+        o.method,
+        o.address,
+        o.cashier,
+        o.number,
+
+        GROUP_CONCAT(op.product_id) AS product_ids,
+        (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
+    FROM `orders` o 
+    LEFT JOIN `order_products` op ON o.id = op.order_id
+    WHERE o.id = ?
+    GROUP BY o.id
+");
+$select_orders->bindParam(1, $order_id, PDO::PARAM_INT);
+$select_orders->execute();
+$order = $select_orders->fetch(PDO::FETCH_ASSOC);
 
 // Check if order exists
 if ($order) {
-    // Order details
-    $customer_name = $order['name'];
-    $number = $order['number'];
-    $email = $order['email'];
-    $method = $order['method'];
-    $address = $order['address'];
-    $total_price = $order['total_price'];
-    $cashier = $order['cashier'];
-    $order_date = $order['placed_on']; // assuming there is a created_at field
-    $total_products = explode(",", $order['total_products']); // The total products field
+  // Order details
+  $customer_name = $order['name'];
+  $number = $order['number'];
+  $email = $order['email'];
+  $method = $order['method'];
+  $address = $order['address'];
+  $total_price = $order['total_price'];
+  $cashier = $order['cashier'];
+  $order_date = $order['placed_on']; // assuming there is a created_at field
+  $product_ids = explode(',', $order['product_ids']); // Get product IDs as an array
 
-    $products = [];
-    foreach ($total_products as $product) {
-        // Clean up spaces and split product name and quantity
-        preg_match('/(.*)\s?\(\s*(\d+)\s*\)/', trim($product), $matches); // Adjusted regex pattern to handle spaces more effectively
-        if (count($matches) == 3) {
-            $product_name = trim($matches[1]); // Remove any extra spaces around the name
-            $quantity = (int) $matches[2]; // Ensure quantity is an integer
 
-            // Fetch product details
-            $product_stmt = $conn->prepare("SELECT * FROM products WHERE name = ? LIMIT 1");
-            $product_stmt->bindParam(1, $product_name, PDO::PARAM_STR);
-            $product_stmt->execute();
-            $product = $product_stmt->fetch(PDO::FETCH_ASSOC);
+  $products = [];
+  foreach ($product_ids as $product) {
+    // Fetch product details
+    $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
+    $select_product->bindParam(1, $product, PDO::PARAM_INT);
+    $select_product->execute();
+    $product_details = $select_product->fetch(PDO::FETCH_ASSOC);
 
-            // If product found, fetch ingredients
-            if ($product) {
-                $product_id = $product['id'];
+    if ($product_details) {
+      // Fetch ingredients for the product
+      $product_id = $product_details['id'];
+      $select_ingredients = $conn->prepare("SELECT ingredients_names FROM barista_inventory WHERE product_id = ?");
+      $select_ingredients->bindParam(1, $product_id, PDO::PARAM_INT);
+      $select_ingredients->execute();
+      $ingredients = $select_ingredients->fetchAll(PDO::FETCH_COLUMN);
 
-                // Fetch ingredients from barista_inventory
-                $inventory_stmt = $conn->prepare("SELECT ingredients_names FROM barista_inventory WHERE product_id = ?");
-                $inventory_stmt->bindParam(1, $product_id, PDO::PARAM_INT);
-                $inventory_stmt->execute();
-                $inventory = $inventory_stmt->fetch(PDO::FETCH_ASSOC);
+      $formatted_ingredients = [];
+      if ($ingredients) {
+        $formatted_ingredients = array_map('trim', explode(',', implode(',', $ingredients)));
+      }
 
-                $ingredients = [];
-                if ($inventory) {
-                    $ingredients = array_map('trim', explode(',', $inventory['ingredients_names']));
-                }
+      // get the price and quantity of the product
+      $select_order_products = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ? AND product_id = ?");
+      $select_order_products->bindParam(1, $order_id, PDO::PARAM_INT);
+      $select_order_products->bindParam(2, $product_id, PDO::PARAM_INT);
+      $select_order_products->execute();
+      $order_product = $select_order_products->fetch(PDO::FETCH_ASSOC);
+      $product_details['price'] = $order_product['price'];
+      $product_details['quantity'] = $order_product['quantity'];
 
-                // Add the product to the array multiple times based on its quantity
-                for ($i = 0; $i < $quantity; $i++) {
-                    $products[] = [
-                        'name' => $product['name'],
-                        'price' => $product['price'],
-                        'image' => $product['image'],
-                        'ingredients' => $ingredients
-                    ];
-                }
-            }
-        }
+      // Add the product to the array multiple times based on its quantity
+      for ($i = 0; $i < $product_details['quantity']; $i++) {
+        $products[] = [
+          'id' => $product_details['id'],
+          'name' => $product_details['name'],
+          'price' => $product_details['price'],
+          'image' => $product_details['image'],
+          'ingredients' => $formatted_ingredients,
+        ];
+      }
     }
+  }
 } else {
-    echo "Order not found.";
+  echo "Order not found.";
 }
 
 // Close the PDO connection (not needed in PDO but can be done)
@@ -87,6 +107,7 @@ $conn = null;
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Barista Ingredient Inventory</title>
@@ -108,7 +129,7 @@ $conn = null;
       background: #fff;
       padding: 20px;
       border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
       margin-bottom: 20px;
     }
 
@@ -133,7 +154,7 @@ $conn = null;
       background: #fff;
       padding: 20px;
       border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
       margin-top: 20px;
     }
 
@@ -245,57 +266,60 @@ $conn = null;
     }
   </style>
 </head>
+
 <body>
 
-<div class="container">
+  <div class="container">
 
-<!-- Order Details -->
-<div class="order-box">
-  <h2>Order Details</h2>
-  <div class="order-details">
-    <p><strong>Customer Name:</strong> <?= htmlspecialchars($customer_name) ?></p>
-    <p><strong>Contact Number:</strong> <?= htmlspecialchars($number) ?></p>
-    <p><strong>Email:</strong> <?= htmlspecialchars($email) ?></p>
-    <p><strong>Payment Method:</strong> <?= htmlspecialchars($method) ?></p>
-    <p><strong>Delivery Address:</strong> <?= htmlspecialchars($address) ?></p>
-    <p><strong>Total Price:</strong> ₱<?= number_format($total_price, 2) ?></p>
-    <p><strong>Date of Order:</strong> <?= htmlspecialchars($order_date) ?></p>
-    <p><strong>Cashier Name:</strong> <?= htmlspecialchars($cashier) ?></p>
-  </div>
-</div>
-
-<!-- Products and Ingredients -->
-<form method="POST" action="submit_consumption.php">
-  <div class="product-list">
-  <input type="hidden" name="order_id" value="<?= htmlspecialchars($order_id) ?>">
-    <?php foreach ($products as $key => $product): ?>
-      <div class="product-item">
-        <div class="product-top">
-          <img src="uploaded_img/<?= htmlspecialchars($product['image']) ?>" alt="<?= htmlspecialchars($product['name']) ?>">
-          <div>
-            <h3><?= htmlspecialchars($product['name']) ?></h3>
-            <p>₱<?= number_format($product['price'], 2) ?></p>
-          </div>
-        </div>
-        <div class="ingredient-inputs">
-          <?php foreach ($product['ingredients'] as $ingredient): ?>
-            <label><?= htmlspecialchars($ingredient) ?>
-              <input type="number" name="ingredients[<?= $key ?>][<?= htmlspecialchars($ingredient) ?>]" step="0.1" min="0">
-            </label>
-          <?php endforeach; ?>
-        </div>
+    <!-- Order Details -->
+    <div class="order-box">
+      <h2>Order Details</h2>
+      <div class="order-details">
+        <p><strong>Customer Name:</strong> <?= htmlspecialchars($customer_name) ?></p>
+        <p><strong>Contact Number:</strong> <?= htmlspecialchars($number) ?></p>
+        <p><strong>Email:</strong> <?= htmlspecialchars($email) ?></p>
+        <p><strong>Payment Method:</strong> <?= htmlspecialchars($method) ?></p>
+        <p><strong>Delivery Address:</strong> <?= htmlspecialchars($address) ?></p>
+        <p><strong>Total Price:</strong> ₱<?= number_format($total_price, 2) ?></p>
+        <p><strong>Date of Order:</strong> <?= htmlspecialchars($order_date) ?></p>
+        <p><strong>Cashier Name:</strong> <?= htmlspecialchars($cashier) ?></p>
       </div>
-    <?php endforeach; ?>
+    </div>
 
-  </div>
+    <!-- Products and Ingredients -->
+    <form method="POST" action="submit_consumption.php">
+      <div class="product-list">
+        <input type="hidden" name="order_id" value="<?= htmlspecialchars($order_id) ?>">
+        <?php foreach ($products as $key => $product): ?>
+          <div class="product-item">
+            <div class="product-top">
+              <img src="uploaded_img/<?= htmlspecialchars($product['image']) ?>"
+                alt="<?= htmlspecialchars($product['name']) ?>">
+              <div>
+                <h3><?= htmlspecialchars($product['name']) ?></h3>
+                <p>₱<?= number_format($product['price'], 2) ?></p>
+              </div>
+            </div>
+            <div class="ingredient-inputs">
+              <?php foreach ($product['ingredients'] as $ingredient): ?>
+                <label><?= htmlspecialchars($ingredient) ?>
+                  <input type="number" name="ingredients[<?= $key ?>][<?= htmlspecialchars($ingredient) ?>]" step="0.1"
+                    min="0">
+                </label>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
 
-  <!-- Action Buttons -->
-  <div style="display: flex; gap: 10px; margin-top: 20px;">
-    <a href="barista_ongoing_order.php" class="cancel-btn">Cancel</a>
-    <button type="submit" class="submit-btn">Submit Consumption</button>
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <a href="barista_ongoing_order.php" class="cancel-btn">Cancel</a>
+        <button type="submit" class="submit-btn">Submit Consumption</button>
+      </div>
+    </form>
   </div>
-</form>
-</div>
 
 </body>
+
 </html>

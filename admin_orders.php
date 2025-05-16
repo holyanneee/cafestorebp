@@ -13,10 +13,10 @@ if (isset($_POST['update_order']) && isset($_POST['is_ajax'])) {
     $order_id = $_POST['order_id'];
     $update_payment = $_POST['update_payment'];
     $update_payment = filter_var($update_payment, FILTER_SANITIZE_STRING);
-    
+
     $update_orders = $conn->prepare("UPDATE `orders` SET payment_status = ? WHERE id = ?");
     $update_orders->execute([$update_payment, $order_id]);
-    
+
     header('Content-Type: application/json');
     echo json_encode([
         'success' => true,
@@ -46,20 +46,80 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
-// Fetch all orders
-$select_orders = $conn->prepare("SELECT * FROM `orders`");
+//  Fetch all orders and its relationship with order_products
+$select_orders = $conn->prepare("
+    SELECT 
+        o.id AS order_id,
+        o.name,
+        o.email,
+        o.placed_on,
+        o.payment_status,
+        o.type,
+        GROUP_CONCAT(op.product_id) AS product_ids,
+        (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
+    FROM `orders` o 
+    LEFT JOIN `order_products` op ON o.id = op.order_id
+    GROUP BY o.id
+");
+
 $select_orders->execute();
 $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
+
+// format the orders
+$formatted_orders = [];
+foreach ($orders as $order) {
+    $formatted_orders[] = [
+        'order_id' => $order['order_id'],
+        'name' => htmlspecialchars($order['name']),
+        'email' => htmlspecialchars($order['email']),
+        'type' => htmlspecialchars($order['type']),
+        'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
+        'payment_status' => htmlspecialchars($order['payment_status']),
+        'total_price' => number_format($order['total_price'], 2),
+        'products' => array_filter(array_map(function ($product_id) use ($conn, $order) {
+            // Fetch product details
+            $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
+            $select_product->execute([$product_id]);
+            $product = $select_product->fetch(PDO::FETCH_ASSOC);
+            // Check if product exists
+            if (!$product) {
+                return null; // Skip if product not found
+            }
+
+            // get the quntity and subtotal from order_products
+            $select_order_product = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ? AND product_id = ?");
+            $select_order_product->execute([$order['order_id'], $product_id]);
+            $order_product = $select_order_product->fetch(PDO::FETCH_ASSOC);
+            if (!$order_product) {
+                return null; // Skip if order product not found
+            }
+            $product['quantity'] = $order_product['quantity'];
+            $product['subtotal'] = $order_product['subtotal'];
+
+            return [
+                'id' => $product['id'],
+                'name' => htmlspecialchars($product['name'] ?? '', ENT_QUOTES, 'UTF-8'),
+                'quantity' => htmlspecialchars($product['quantity'] ?? '0', ENT_QUOTES, 'UTF-8'),
+                'price' => number_format($product['price'] ?? 0, 2),
+                'subtotal' => number_format($product['subtotal'] ?? 0, 2)
+            ];
+        }, explode(',', $order['product_ids'])))
+    ];
+}
+
+$orders = $formatted_orders;
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title> Manage Orders</title>
-      <!-- font awesome cdn link  -->
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <!-- font awesome cdn link  -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <!-- custom css file link  -->
@@ -71,26 +131,31 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
             background-color: #f8f9fa;
             font-size: 14px;
         }
+
         .admin-container {
             margin-left: 220px;
             padding: 20px;
-            margin-top: 50px;
+            margin-top: 80px;
         }
+
         .card {
             border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
             border: none;
             margin-top: 50px;
         }
+
         .table-responsive {
             border-radius: 6px;
             overflow: hidden;
         }
+
         .table {
             margin-bottom: 0;
             width: 100%;
             table-layout: fixed;
         }
+
         .table thead th {
             background-color: #4a6fdc;
             color: white;
@@ -99,12 +164,14 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
             font-size: 12px;
             white-space: nowrap;
         }
+
         .table tbody td {
             padding: 10px 8px;
             vertical-align: middle;
             font-size: 12px;
             word-wrap: break-word;
         }
+
         .status-badge {
             padding: 4px 8px;
             border-radius: 10px;
@@ -114,14 +181,17 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
             min-width: 80px;
             text-align: center;
         }
+
         .status-completed {
             background-color: #e6f7e6;
             color: #27ae60;
         }
+
         .status-pending {
             background-color: #fff7e6;
             color: #e67e22;
         }
+
         .action-btn {
             padding: 4px 8px;
             border-radius: 4px;
@@ -133,21 +203,25 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
             border: 1px solid transparent;
             cursor: pointer;
         }
+
         .btn-view {
             background-color: #e3f2fd;
             color: #1976d2;
             border-color: #bbdefb;
         }
+
         .btn-update {
             background-color: #e8f5e9;
             color: #388e3c;
             border-color: #c8e6c9;
         }
+
         .btn-delete {
             background-color: #ffebee;
             color: #d32f2f;
             border-color: #ffcdd2;
         }
+
         .filter-section {
             background-color: white;
             padding: 12px;
@@ -156,49 +230,60 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
             display: flex;
             justify-content: flex-end;
         }
+
         .filter-container {
             display: flex;
             align-items: center;
             gap: 10px;
         }
+
         .pagination-info {
             font-size: 12px;
             color: #6c757d;
             margin-top: 10px;
             text-align: right;
         }
+
         .modal-content {
             font-size: 13px;
         }
+
         .modal-header {
             padding: 10px 15px;
             font-size: 14px;
             background-color: #4a6fdc;
             color: white;
         }
+
         .btn-close-white {
             filter: invert(1);
         }
+
         .order-details strong {
             width: 120px;
             display: inline-block;
             font-size: 13px;
         }
+
         .empty-orders {
             padding: 20px;
             font-size: 14px;
             text-align: center;
             color: #666;
         }
-        .form-control, .form-select {
+
+        .form-control,
+        .form-select {
             font-size: 12px;
             padding: 5px 8px;
             height: 32px;
         }
+
         .btn-sm {
             padding: 4px 8px;
             font-size: 12px;
         }
+
         .toast-container {
             position: fixed;
             top: 20px;
@@ -207,6 +292,7 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
         }
     </style>
 </head>
+
 <body>
     <?php include 'admin_header.php'; ?>
 
@@ -221,10 +307,17 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
                 <select class="form-select form-select-sm" style="width: 140px;" id="statusFilter">
                     <option value="all" selected>All Statuses</option>
                     <option value="completed">Completed</option>
-                    <option value="pending">Pending</option>
+                    <option value="on Queue">On Queue</option>
+                    <option value="On Going">On Going</option>
+                </select>
+                <select class="form-select form-select-sm" style="width: 140px;" id="typeFilter">
+                    <option value="all" selected>All Types</option>
+                    <option value="coffee">Coffee</option>
+                    <option value="online">Online</option>
                 </select>
                 <input type="date" class="form-control form-control-sm" style="width: 140px;" id="dateFilter">
-                <button class="btn btn-sm btn-outline-secondary" style="font-size: 12px;" id="clearFilters">✖ Clear</button>
+                <button class="btn btn-sm btn-outline-secondary" style="font-size: 12px;" id="clearFilters">✖
+                    Clear</button>
             </div>
         </div>
 
@@ -244,40 +337,112 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
                     <tbody>
                         <?php if (!empty($orders)): ?>
                             <?php foreach ($orders as $order): ?>
-                                <?php 
+                                <?php
                                 $status_class = $order['payment_status'] == 'completed' ? 'status-completed' : 'status-pending';
                                 $order_date = date('M d, Y', strtotime($order['placed_on']));
                                 ?>
-                                <tr data-id="<?= $order['id'] ?>" data-status="<?= $order['payment_status'] ?>" data-date="<?= date('Y-m-d', strtotime($order['placed_on'])) ?>">
-                                    <td>#<?= $order['id'] ?></td>
+                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['payment_status'] ?>"
+                                    data-date="<?= date('Y-m-d', strtotime($order['placed_on'])) ?>"
+                                    data-type="<?= $order['type'] ?>">
+                                    <td>#<?= $order['order_id'] ?></td>
                                     <td>
-                                        <div class="fw-semibold" style="font-size: 12px;"><?= htmlspecialchars($order['name']) ?></div>
-                                        <div class="text-muted" style="font-size: 11px;"><?= htmlspecialchars($order['email']) ?></div>
+                                        <div class="fw-semibold" style="font-size: 12px;">
+                                            <?= htmlspecialchars($order['name']) ?>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 11px;">
+                                            <?= htmlspecialchars($order['email']) ?>
+                                        </div>
                                     </td>
                                     <td><?= $order_date ?></td>
-                                    <td>₱<?= number_format($order['total_price'], 2) ?></td>
+                                    <td>₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?></td>
                                     <td>
                                         <span class="status-badge <?= $status_class ?>">
                                             <?= ucfirst($order['payment_status']) ?>
                                         </span>
                                     </td>
                                     <td>
-                                        <button class="action-btn btn-view" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#viewOrderModal"
-                                                data-order-id="<?= $order['id'] ?>">
+                                        <button class="action-btn btn-view" data-bs-toggle="modal"
+                                            data-bs-target="#viewOrderModal-<?= $order['order_id'] ?>">
                                             View
                                         </button>
-                                        <button class="action-btn btn-update" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#updateOrderModal"
-                                                data-id="<?= $order['id'] ?>"
-                                                data-status="<?= $order['payment_status'] ?>">
+                                        <!-- modal -->
+                                        <div class="modal fade" id="viewOrderModal-<?= $order['order_id'] ?>" tabindex="-1"
+                                            aria-labelledby="viewOrderModalLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-lg">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="viewOrderModalLabel">Order Details -
+                                                            #<?= $order['order_id'] ?>
+                                                        </h5>
+                                                        <button type="button" class="btn-close btn-close-white"
+                                                            data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <div class="order-details mb-2">
+                                                                    <strong>Customer Name:</strong>
+                                                                    <?= htmlspecialchars($order['name']) ?>
+                                                                </div>
+                                                                <div class="order-details mb-2">
+                                                                    <strong>Email:</strong>
+                                                                    <?= htmlspecialchars($order['email']) ?>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <div class="order-details mb-2">
+                                                                    <strong>Order Date:</strong>
+                                                                    <?= $order_date ?>
+                                                                </div>
+                                                                <div class="order-details mb-2">
+                                                                    <strong>Status:</strong>
+                                                                    <span
+                                                                        class="status-badge <?= $status_class ?>"><?= ucfirst($order['payment_status']) ?></span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="order-details mb-3">
+                                                            <strong>Total Amount:</strong>
+                                                            ₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?>
+                                                        </div>
+                                                        <h2 class="fw-bold">Order Information:</h2>
+                                                        <table class="table table-bordered">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Product Name</th>
+                                                                    <th>Quantity</th>
+                                                                    <th>Price</th>
+                                                                    <th>Subtotal</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <?php foreach ($order['products'] as $product): ?>
+                                                                    <tr>
+                                                                        <td><?= $product['name'] ?></td>
+                                                                        <td><?= $product['quantity'] ?></td>
+                                                                        <td>₱<?= number_format($product['price'], 2) ?></td>
+                                                                        <td>₱<?= number_format((float) str_replace(',', '', $product['subtotal']), 2) ?>
+                                                                        </td>
+                                                                    </tr>
+                                                                <?php endforeach; ?>
+                                                            </tbody>
+                                                        </table>
+
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary btn-sm"
+                                                            data-bs-dismiss="modal">Close</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button class="action-btn btn-update" data-bs-toggle="modal"
+                                            data-bs-target="#updateOrderModal" data-id="<?= $order['order_id'] ?>"
+                                            data-status="<?= $order['payment_status'] ?>">
                                             Update
                                         </button>
-                                        <a href="admin_orders.php?delete=<?= $order['id'] ?>" 
-                                           class="action-btn btn-delete" 
-                                           onclick="return confirm('Delete this order?');">
+                                        <a href="admin_orders.php?delete=<?= $order['order_id'] ?>"
+                                            class="action-btn btn-delete" onclick="return confirm('Delete this order?');">
                                             Delete
                                         </a>
                                     </td>
@@ -298,32 +463,17 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
-    <!-- View Order Modal -->
-    <div class="modal fade" id="viewOrderModal" tabindex="-1" aria-labelledby="viewOrderModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="viewOrderModalLabel">Order Details - #<span id="modalOrderId"></span></h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="orderDetailsContent">
-                    <!-- Content will be loaded via JavaScript -->
-                    Loading order details...
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Update Order Modal -->
-    <div class="modal fade" id="updateOrderModal" tabindex="-1" aria-labelledby="updateOrderModalLabel" aria-hidden="true">
+    <div class="modal fade" id="updateOrderModal" tabindex="-1" aria-labelledby="updateOrderModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="updateOrderModalLabel">Update Order Status</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 <form method="POST" id="updateOrderForm">
                     <input type="hidden" name="order_id" id="updateOrderId">
@@ -348,12 +498,14 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
 
     <!-- Toast Notification -->
     <div class="toast-container">
-        <div id="updateToast" class="toast align-items-center text-white bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+        <div id="updateToast" class="toast align-items-center text-white bg-success" role="alert" aria-live="assertive"
+            aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body">
                     Order status updated successfully!
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                    aria-label="Close"></button>
             </div>
         </div>
     </div>
@@ -362,76 +514,78 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
     <script>
         // Initialize components
         const updateToast = new bootstrap.Toast(document.getElementById('updateToast'));
-        const viewOrderModal = document.getElementById('viewOrderModal');
-        
-        // View Order Modal - Load data when shown
-        viewOrderModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const orderId = button.getAttribute('data-order-id');
-            
-            // Find the order in the table data
-            const orderRow = document.querySelector(`tr[data-id="${orderId}"]`);
-            if (orderRow) {
-                const orderData = {
-                    id: orderId,
-                    name: orderRow.querySelector('.fw-semibold').textContent,
-                    email: orderRow.querySelector('.text-muted').textContent,
-                    date: orderRow.cells[2].textContent,
-                    total: orderRow.cells[3].textContent,
-                    status: orderRow.querySelector('.status-badge').textContent.trim(),
-                    // Add more fields as needed
-                };
-                
-                // Update modal title with order ID
-                document.getElementById('modalOrderId').textContent = orderId;
-                
-                // Build and display order details
-                const detailsHTML = `
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="order-details mb-2">
-                                <strong>Customer Name:</strong> ${orderData.name}
-                            </div>
-                            <div class="order-details mb-2">
-                                <strong>Email:</strong> ${orderData.email}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="order-details mb-2">
-                                <strong>Order Date:</strong> ${orderData.date}
-                            </div>
-                            <div class="order-details mb-2">
-                                <strong>Status:</strong> <span class="status-badge ${orderData.status.toLowerCase() === 'completed' ? 'status-completed' : 'status-pending'}">
-                                    ${orderData.status}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="order-details mb-3">
-                        <strong>Total Amount:</strong> ${orderData.total}
-                    </div>
-                    <div class="products-list">
-                        <h6 class="fw-bold">Order Information:</h6>
-                        <p>Full order details would be displayed here.</p>
-                    </div>
-                `;
-                
-                document.getElementById('orderDetailsContent').innerHTML = detailsHTML;
-            }
-        });
-        
+
+        console.log(<?= json_encode($orders) ?>);
+
+
         // Update Order Modal - Set current status when opening
         document.querySelectorAll('.btn-update').forEach(button => {
-            button.addEventListener('click', function() {
+            button.addEventListener('click', function () {
                 const orderId = this.getAttribute('data-id');
                 const currentStatus = this.getAttribute('data-status');
-                
+
                 document.getElementById('updateOrderId').value = orderId;
                 document.getElementById('updatePaymentStatus').value = currentStatus;
             });
         });
-        
+
         // [Rest of your JavaScript remains the same]
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const statusFilter = document.getElementById('statusFilter');
+            const typeFilter = document.getElementById('typeFilter');
+            const dateFilter = document.getElementById('dateFilter');
+            const clearFilters = document.getElementById('clearFilters');
+            const tableRows = document.querySelectorAll('tbody tr');
+
+            function filterOrders() {
+                const statusValue = statusFilter.value;
+                const dateValue = dateFilter.value;
+
+                let hasVisibleRows = false;
+
+                tableRows.forEach(row => {
+                    const rowStatus = row.getAttribute('data-status');
+                    const rowDate = row.getAttribute('data-date');
+
+                    let matchesStatus = statusValue === 'all' || rowStatus === statusValue;
+                    let matchesDate = !dateValue || rowDate === dateValue;
+
+                    if (matchesStatus && matchesDate) {
+                        row.style.display = '';
+                        hasVisibleRows = true;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                const emptyMessageRow = document.querySelector('.empty-orders-row');
+                if (!hasVisibleRows) {
+                    if (!emptyMessageRow) {
+                        const emptyRow = document.createElement('tr');
+                        emptyRow.classList.add('empty-orders-row');
+                        emptyRow.innerHTML = `<td colspan="6" class="empty-orders">No matching orders found!</td>`;
+                        document.querySelector('tbody').appendChild(emptyRow);
+                    }
+                } else if (emptyMessageRow) {
+                    emptyMessageRow.remove();
+                }
+            }
+
+            statusFilter.addEventListener('change', filterOrders);
+            typeFilter.addEventListener('change', filterOrders);
+            dateFilter.addEventListener('change', filterOrders);
+
+            clearFilters.addEventListener('click', function () {
+                statusFilter.value = 'all';
+                typeFilter.value = 'all';
+                dateFilter.value = '';
+                filterOrders();
+            });
+        });
+
+    </script>
 </body>
+
 </html>
