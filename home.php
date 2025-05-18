@@ -158,7 +158,7 @@ if(isset($_POST['add_to_cart'])){
    <h1 class="title">latest products</h1>
    <div class="box-container">
    <?php
-      $select_products = $conn->prepare("SELECT * FROM `products` WHERE `status` = 'active' ORDER BY id DESC LIMIT 6");
+      $select_products = $conn->prepare("SELECT * FROM `products` WHERE `status` = 'active' AND type = 'coffee' ORDER BY id DESC LIMIT 6");
       $select_products->execute();
       
       if($select_products->rowCount() > 0){

@@ -170,7 +170,7 @@ if(isset($_POST['add_to_cart'])){
    <div class="box-container">
 
    <?php
-      $select_products = $conn->prepare("SELECT * FROM `online_product` LIMIT 6");
+      $select_products = $conn->prepare("SELECT * FROM `products` WHERE type = 'online' LIMIT 6");
       $select_products->execute();
       if($select_products->rowCount() > 0){
          while($fetch_products = $select_products->fetch(PDO::FETCH_ASSOC)){ 

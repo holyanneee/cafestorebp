@@ -14,15 +14,15 @@ if (!isset($user_id)) {
 if (isset($_POST['order'])) {
 
    $name = $_POST['name'];
-   $name = filter_var($name, FILTER_SANITIZE_STRING);
+   $name = filter_var($name, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
    $number = $_POST['number'];
-   $number = filter_var($number, FILTER_SANITIZE_STRING);
+   $number = filter_var($number, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
    $email = $_POST['email'];
-   $email = filter_var($email, FILTER_SANITIZE_STRING);
+   $email = filter_var($email, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
    $method = $_POST['method'];
-   $method = filter_var($method, FILTER_SANITIZE_STRING);
+   $method = filter_var($method, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
    $address = 'flat no. ' . $_POST['flat'] . ' ' . $_POST['street'] . ' ' . $_POST['city'] . ' ' . $_POST['state'] . ' ' . $_POST['country'] . ' - ' . $_POST['pin_code'];
-   $address = filter_var($address, FILTER_SANITIZE_STRING);
+   $address = filter_var($address, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
    $placed_on = date('d-M-Y');
 
    $cart_total = 0;
@@ -94,7 +94,8 @@ if (isset($_POST['order'])) {
             $cart_grand_total += $cart_total_price;
             ?>
             <p> <?= $fetch_cart_items['name']; ?>
-               <span>(<?= '₱' . $fetch_cart_items['price'] . ' x ' . $fetch_cart_items['quantity']; ?>)</span> </p>
+               <span>(<?= '₱' . $fetch_cart_items['price'] . ' x ' . $fetch_cart_items['quantity']; ?>)</span>
+            </p>
             <?php
          }
       } else {
@@ -105,87 +106,89 @@ if (isset($_POST['order'])) {
       <section class="checkout-orders">
 
 
-      <form action="" method="POST">
+         <form action="" method="POST">
 
-<h3>Place your order</h3>
+            <h3>Place your order</h3>
 
-<div class="flex">
-   <div class="inputBox">
-      <span>Name :</span>
-      <input type="text" name="name" placeholder="" class="box" required>
-   </div>
-   <div class="inputBox">
-      <span>Number :</span>
-      <input type="number" name="number" placeholder="" class="box" required>
-   </div>
-   <div class="inputBox">
-      <span>Email :</span>
-      <input type="email" name="email" placeholder="" class="box" required>
-   </div>
-   <div class="inputBox">
-      <span>Payment Method :</span>
-      <select name="method" class="box" id="paymentMethod" required>
-         <option value="">Select Payment Method</option>
-         <option value="cash on delivery">Cash on Delivery</option>
-         <option value="gcash">Gcash</option>
-         <option value="paypal">Paypal</option>
-      </select>
-   </div>
-   <div class="inputBox">
-      <span>Address :</span>
-      <input type="text" name="flat" placeholder="" class="box" required>
-   </div>
-   <div class="inputBox">
-      <span>City :</span>
-      <input type="text" name="city" placeholder="" class="box" required>
-   </div>
-   <div class="inputBox">
-      <span>Zip Code :</span>
-      <input type="number" min="0" name="pin_code" placeholder="e.g. 123456" class="box" required>
-   </div>
-</div>
+            <div class="flex">
+               <div class="inputBox">
+                  <span>Name :</span>
+                  <input type="text" name="name" placeholder="" class="box" required>
+               </div>
+               <div class="inputBox">
+                  <span>Number :</span>
+                  <input type="number" name="number" placeholder="" class="box" required>
+               </div>
+               <div class="inputBox">
+                  <span>Email :</span>
+                  <input type="email" name="email" placeholder="" class="box" required>
+               </div>
+               <div class="inputBox">
+                  <span>Payment Method :</span>
+                  <select name="method" class="box" id="paymentMethod" required>
+                     <option value="">Select Payment Method</option>
+                     <option value="cash on delivery">Cash on Delivery</option>
+                     <option value="gcash">Gcash</option>
+                     <option value="paypal">Paypal</option>
+                  </select>
+               </div>
+               <div class="inputBox">
+                  <span>Address :</span>
+                  <input type="text" name="flat" placeholder="" class="box" required>
+               </div>
+               <div class="inputBox">
+                  <span>City :</span>
+                  <input type="text" name="city" placeholder="" class="box" required>
+               </div>
+               <div class="inputBox">
+                  <span>Zip Code :</span>
+                  <input type="number" min="0" name="pin_code" placeholder="e.g. 123456" class="box" required>
+               </div>
+            </div>
 
-<!-- QR Code Display Section -->
-<div id="paymentQRCode" style="display: none; text-align: center;">
-   <p id="qrText" style="margin-bottom: 5px;"></p>
-   <img id="qrImage" src="" alt="Payment QR Code" style="max-width: 200px;">
-</div>
-
-
-<input type="submit" name="order" class="btn <?= ($cart_grand_total > 1)?'':'disabled'; ?>" value="place order">
-
-</form>
+            <!-- QR Code Display Section -->
+            <div id="paymentQRCode" style="display: none; text-align: center;">
+               <p id="qrText" style="margin-bottom: 5px;"></p>
+               <img id="qrImage" src="" alt="Payment QR Code" style="max-width: 200px;">
+            </div>
 
 
-</section>
+            <input type="submit" name="order" class="btn <?= ($cart_grand_total > 1) ? '' : 'disabled'; ?>"
+               value="place order">
+
+         </form>
+
+
+      </section>
 
 
 
 
-   <script src="js/script.js"></script>
-   <script>
-document.getElementById('paymentMethod').addEventListener('change', function () {
-    var qrCodeSection = document.getElementById('paymentQRCode');
-    var qrImage = document.getElementById('qrImage');
-    var qrText = document.getElementById('qrText');
+      <script src="js/script.js"></script>
+      <script>
+         document.getElementById('paymentMethod').addEventListener('change', function () {
+            var qrCodeSection = document.getElementById('paymentQRCode');
+            var qrImage = document.getElementById('qrImage');
+            var qrText = document.getElementById('qrText');
 
-    if (this.value === "gcash") {
-        qrCodeSection.style.display = "block";
-        qrImage.src = "images/gcash.png"; // Replace with actual GCash QR image path
-        qrText.innerText = "Scan the QR code below to complete payment.";
-    } else if (this.value === "paypal") {
-        qrCodeSection.style.display = "block";
-        qrImage.src = "images/paypal.jpg"; // Replace with actual PayPal QR image path
-        qrText.innerText = "Scan the QR code below to complete payment.";
-    } else {
-        qrCodeSection.style.display = "none";
-        qrImage.src = "";
-        qrText.innerText = "";
-    }
-});
+            if (this.value === "gcash") {
+               qrCodeSection.style.display = "block";
+               qrImage.src = "images/gcash.png"; // Replace with actual GCash QR image path
+               qrText.innerText = "Scan the QR code below to complete payment.";
+            } else if (this.value === "paypal") {
+               qrCodeSection.style.display = "block";
+               qrImage.src = "images/paypal.jpg"; // Replace with actual PayPal QR image path
+               qrText.innerText = "Scan the QR code below to complete payment.";
+            } else {
+               qrCodeSection.style.display = "none";
+               qrImage.src = "";
+               qrText.innerText = "";
+            }
+         });
 
-</script>
+      </script>
 
 
 </body>
+
 </html>
