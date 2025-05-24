@@ -46,7 +46,7 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
-//  Fetch all orders and its relationship with order_products
+//  Fetch all orders and its relationship with order_products, ordered by order_id
 $select_orders = $conn->prepare("
     SELECT 
         o.id AS order_id,
@@ -60,6 +60,7 @@ $select_orders = $conn->prepare("
     FROM `orders` o 
     LEFT JOIN `order_products` op ON o.id = op.order_id
     GROUP BY o.id
+    ORDER BY o.id
 ");
 
 $select_orders->execute();
@@ -101,7 +102,20 @@ foreach ($orders as $order) {
                 'name' => htmlspecialchars($product['name'] ?? '', ENT_QUOTES, 'UTF-8'),
                 'quantity' => htmlspecialchars($product['quantity'] ?? '0', ENT_QUOTES, 'UTF-8'),
                 'price' => number_format($product['price'] ?? 0, 2),
-                'subtotal' => number_format($product['subtotal'] ?? 0, 2)
+                'subtotal' => number_format($product['subtotal'] ?? 0, 2),
+                'cup_sizes' => json_decode($order_product['cup_sizes'] ?? '[]', true) ?: [],
+                'ingredients' => array_map(function ($ingredient) {
+                    return [
+                        'name' => htmlspecialchars($ingredient['name'] ?? '', ENT_QUOTES, 'UTF-8'),
+                        'level' => htmlspecialchars($ingredient['level'] ?? '', ENT_QUOTES, 'UTF-8')
+                    ];
+                }, json_decode($order_product['ingredients'] ?? '[]', true) ?: []),
+                'add_ons' => array_map(function ($addOn) {
+                    return [
+                        'name' => htmlspecialchars($addOn['name'] ?? '', ENT_QUOTES, 'UTF-8'),
+                        'price' => number_format($addOn['price'] ?? 0, 2)
+                    ];
+                }, json_decode($order_product['add_ons'] ?? '[]', true) ?: []),
             ];
         }, explode(',', $order['product_ids'])))
     ];
@@ -366,76 +380,7 @@ $orders = $formatted_orders;
                                             View
                                         </button>
                                         <!-- modal -->
-                                        <div class="modal fade" id="viewOrderModal-<?= $order['order_id'] ?>" tabindex="-1"
-                                            aria-labelledby="viewOrderModalLabel" aria-hidden="true">
-                                            <div class="modal-dialog modal-lg">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="viewOrderModalLabel">Order Details -
-                                                            #<?= $order['order_id'] ?>
-                                                        </h5>
-                                                        <button type="button" class="btn-close btn-close-white"
-                                                            data-bs-dismiss="modal" aria-label="Close"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <div class="row">
-                                                            <div class="col-md-6">
-                                                                <div class="order-details mb-2">
-                                                                    <strong>Customer Name:</strong>
-                                                                    <?= htmlspecialchars($order['name']) ?>
-                                                                </div>
-                                                                <div class="order-details mb-2">
-                                                                    <strong>Email:</strong>
-                                                                    <?= htmlspecialchars($order['email']) ?>
-                                                                </div>
-                                                            </div>
-                                                            <div class="col-md-6">
-                                                                <div class="order-details mb-2">
-                                                                    <strong>Order Date:</strong>
-                                                                    <?= $order_date ?>
-                                                                </div>
-                                                                <div class="order-details mb-2">
-                                                                    <strong>Status:</strong>
-                                                                    <span
-                                                                        class="status-badge <?= $status_class ?>"><?= ucfirst($order['payment_status']) ?></span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="order-details mb-3">
-                                                            <strong>Total Amount:</strong>
-                                                            ₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?>
-                                                        </div>
-                                                        <h2 class="fw-bold">Order Information:</h2>
-                                                        <table class="table table-bordered">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th>Product Name</th>
-                                                                    <th>Quantity</th>
-                                                                    <th>Price</th>
-                                                                    <th>Subtotal</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                <?php foreach ($order['products'] as $product): ?>
-                                                                    <tr>
-                                                                        <td><?= $product['name'] ?></td>
-                                                                        <td><?= $product['quantity'] ?></td>
-                                                                        <td>₱<?= number_format($product['price'], 2) ?></td>
-                                                                        <td>₱<?= number_format((float) str_replace(',', '', $product['subtotal']), 2) ?>
-                                                                        </td>
-                                                                    </tr>
-                                                                <?php endforeach; ?>
-                                                            </tbody>
-                                                        </table>
-
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary btn-sm"
-                                                            data-bs-dismiss="modal">Close</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <?php include 'view_order_modal.php'; ?>
                                         <button class="action-btn btn-update" data-bs-toggle="modal"
                                             data-bs-target="#updateOrderModal" data-id="<?= $order['order_id'] ?>"
                                             data-status="<?= $order['payment_status'] ?>">

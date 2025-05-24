@@ -13,48 +13,38 @@ if (!isset($user_id)) {
 
 if (isset($_POST['order'])) {
 
-   $name = $_POST['name'];
-   $name = filter_var($name, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-   $number = $_POST['number'];
-   $number = filter_var($number, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-   $email = $_POST['email'];
-   $email = filter_var($email, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-   $method = $_POST['method'];
-   $method = filter_var($method, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-   $address = 'flat no. ' . $_POST['flat'] . ' ' . $_POST['street'] . ' ' . $_POST['city'] . ' ' . $_POST['state'] . ' ' . $_POST['country'] . ' - ' . $_POST['pin_code'];
-   $address = filter_var($address, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-   $placed_on = date('d-M-Y');
+   $name = filter_var($_POST['name'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+   $number = filter_var( $_POST['number'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+   $email = filter_var($_POST['email'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+   $method = filter_var($_POST['method'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+   $address = filter_var($_POST['address'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+   $placed_on = date('Y-m-d H:i:s');
 
-   $cart_total = 0;
-   $cart_products[] = '';
+   // insert to orders
+   $order_query = $conn->prepare("INSERT INTO `orders`(user_id, name, number, email, method, address, placed_on) VALUES(?,?,?,?,?,?,?)");
+   $order_query->execute([$user_id, $name, $number, $email, $method, $address, $placed_on]);
+   $order_id = $conn->lastInsertId();
 
    $cart_query = $conn->prepare("SELECT * FROM `cart` WHERE user_id = ?");
    $cart_query->execute([$user_id]);
    if ($cart_query->rowCount() > 0) {
-      while ($cart_item = $cart_query->fetch(PDO::FETCH_ASSOC)) {
-         $cart_products[] = $cart_item['name'] . ' ( ' . $cart_item['quantity'] . ' )';
-         $sub_total = ($cart_item['price'] * $cart_item['quantity']);
-         $cart_total += $sub_total;
+     foreach ($cart_query->fetchAll(PDO::FETCH_ASSOC) as $cart_item) {
+         // insert to order_products
+         $prouct_id = $cart_item['product_id'];
+         $price = $cart_item['price'];
+         $quantity = $cart_item['quantity'];
+         $subtotal = $price * $quantity;
+
+         $order_product_query = $conn->prepare("INSERT INTO `order_products`(order_id, product_id, quantity, price, subtotal) VALUES(?,?,?,?,?)");
+         $order_product_query->execute([$order_id, $prouct_id, $quantity, $price, $subtotal]);
       }
-      ;
-   }
-   ;
 
-   $total_products = implode(', ', $cart_products);
-
-   $order_query = $conn->prepare("SELECT * FROM `orders` WHERE name = ? AND number = ? AND email = ? AND method = ? AND address = ? AND total_products = ? AND total_price = ?");
-   $order_query->execute([$name, $number, $email, $method, $address, $total_products, $cart_total]);
-
-   if ($cart_total == 0) {
-      $message[] = 'your cart is empty';
-   } elseif ($order_query->rowCount() > 0) {
-      $message[] = 'order placed already!';
-   } else {
-      $insert_order = $conn->prepare("INSERT INTO `orders`(user_id, name, number, email, method, address, total_products, total_price, placed_on) VALUES(?,?,?,?,?,?,?,?,?)");
-      $insert_order->execute([$user_id, $name, $number, $email, $method, $address, $total_products, $cart_total, $placed_on]);
-      $delete_cart = $conn->prepare("DELETE FROM `cart` WHERE user_id = ?");
-      $delete_cart->execute([$user_id]);
+      // delete from cart
+      $delete_cart_query = $conn->prepare("DELETE FROM `cart` WHERE user_id = ?");
+      $delete_cart_query->execute([$user_id]);
       $message[] = 'order placed successfully!';
+   } else {
+      $message[] = 'your cart is empty!';
    }
 
 }
@@ -134,7 +124,7 @@ if (isset($_POST['order'])) {
                </div>
                <div class="inputBox">
                   <span>Address :</span>
-                  <input type="text" name="flat" placeholder="" class="box" required>
+                  <input type="text" name="address" placeholder="" class="box" required>
                </div>
                <div class="inputBox">
                   <span>City :</span>

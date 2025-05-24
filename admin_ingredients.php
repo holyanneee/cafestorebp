@@ -1,6 +1,4 @@
-Here's the full code with the modifications you requested to replace "products" with "ingredients," update the actions (add, edit, delete) for ingredients, and adjust the filters to include only "milliliters" and "grams" as units.
 
-```php
 <?php
 @include 'config.php';
 session_start();
@@ -23,13 +21,14 @@ if (isset($_GET['delete_ingredient'])) {
 
 // Add Ingredient
 if (isset($_POST['add_ingredient'])) {
-    $name = filter_var($_POST['name'], FILTER_SANITIZE_STRING);
+    $name = filter_var($_POST['name'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $stock = filter_var($_POST['stock'], FILTER_VALIDATE_INT);
-    $unit = filter_var($_POST['unit'], FILTER_SANITIZE_STRING);
-    $status = filter_var($_POST['status'], FILTER_SANITIZE_STRING);
-    
-    $insert_ingredient = $conn->prepare("INSERT INTO ingredients (name, stock, unit, status) VALUES (?, ?, ?, ?)");
-    $insert_ingredient->execute([$name, $stock, $unit, $status]);
+    $unit = filter_var($_POST['unit'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+    $status = filter_var($_POST['status'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+    $is_consumable = filter_var($_POST['is_consumable'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+
+    $insert_ingredient = $conn->prepare("INSERT INTO ingredients (name, stock, unit, status, is_consumable) VALUES (?, ?, ?, ?, ?)");
+    $insert_ingredient->execute([$name, $stock, $unit, $status, $is_consumable]);
     header('location:admin_ingredients.php');
     exit();
 }
@@ -37,14 +36,15 @@ if (isset($_POST['add_ingredient'])) {
 // Update Ingredient
 if (isset($_POST['update_ingredient'])) {
     $update_id = $_POST['update_id'];
-    $name = filter_var($_POST['name'], FILTER_SANITIZE_STRING);
+    $name = filter_var($_POST['name'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $stock = filter_var($_POST['stock'], FILTER_VALIDATE_INT);
-    $unit = filter_var($_POST['unit'], FILTER_SANITIZE_STRING);
-    $status = filter_var($_POST['status'], FILTER_SANITIZE_STRING);
-    
-    $update_ingredient = $conn->prepare("UPDATE ingredients SET name=?, stock=?, unit=?, status=? WHERE id=?");
-    $update_ingredient->execute([$name, $stock, $unit, $status, $update_id]);
-    
+    $unit = filter_var($_POST['unit'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+    $status = filter_var($_POST['status'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+    $is_consumable = filter_var($_POST['is_consumable'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+
+    $update_ingredient = $conn->prepare("UPDATE ingredients SET name=?, stock=?, unit=?, status=?, is_consumable=? WHERE id=?");
+    $update_ingredient->execute([$name, $stock, $unit, $status, $is_consumable, $update_id]);
+
     header('location:admin_ingredients.php');
     exit();
 }
@@ -57,33 +57,36 @@ $ingredients = $show_ingredients->fetchAll(PDO::FETCH_ASSOC);
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory Management</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/admin_style.css">
-    
-     
+
+
     <style>
         :root {
             --table-margin-top: 80px;
         }
-/* Adjust dropdown and search font size */
-.menu-actions select,
-.menu-actions input {
-    font-size: 14px; /* Adjust this value as needed */
-}
 
-/* Make "Manage Menu" title bold */
-.menu-header h2 {
-    font-weight: 700;
-}
+        /* Adjust dropdown and search font size */
+        .menu-actions select,
+        .menu-actions input {
+            font-size: 14px;
+            /* Adjust this value as needed */
+        }
+
+        /* Make "Manage Menu" title bold */
+        .menu-header h2 {
+            font-weight: 700;
+        }
 
         .menu-container {
             padding: 20px;
@@ -246,35 +249,39 @@ $ingredients = $show_ingredients->fetchAll(PDO::FETCH_ASSOC);
                 margin: 15px;
             }
         }
+
         .menu-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
 
-.menu-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-left: auto;
-}
-/* Adjust font size in modals */
-.modal-content {
-    font-size: 14px; /* Adjust as needed */
-}
+        .menu-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-left: auto;
+        }
 
-/* Optionally, target specific elements */
-.modal-content label,
-.modal-content input,
-.modal-content select,
-.modal-content textarea,
-.modal-content button {
-    font-size: 14px; /* Keep it consistent */
-}
+        /* Adjust font size in modals */
+        .modal-content {
+            font-size: 14px;
+            /* Adjust as needed */
+        }
 
+        /* Optionally, target specific elements */
+        .modal-content label,
+        .modal-content input,
+        .modal-content select,
+        .modal-content textarea,
+        .modal-content button {
+            font-size: 14px;
+            /* Keep it consistent */
+        }
     </style>
 </head>
+
 <body>
     <?php include 'admin_header.php'; ?>
 
@@ -282,6 +289,11 @@ $ingredients = $show_ingredients->fetchAll(PDO::FETCH_ASSOC);
         <div class="menu-header">
             <h2>Manage Ingredients</h2>
             <div class="menu-actions">
+                <select id="is_consumable">
+                    <option value="">Select</option>
+                    <option value="1">Consumables</option>
+                    <option value="0">Non-Consumables</option>
+                </select>
                 <input type="text" id="searchInput" placeholder="Search ingredients...">
                 <button class="add-btn" data-bs-toggle="modal" data-bs-target="#addIngredientModal">
                     + Add New Ingredient
@@ -296,6 +308,7 @@ $ingredients = $show_ingredients->fetchAll(PDO::FETCH_ASSOC);
                     <th>INGREDIENT</th>
                     <th>STOCK</th>
                     <th>UNIT</th>
+                    <th>Type</th>
                     <th>STATUS</th>
                     <th>ACTIONS</th>
                 </tr>
@@ -309,22 +322,80 @@ $ingredients = $show_ingredients->fetchAll(PDO::FETCH_ASSOC);
                             <td><?= htmlspecialchars($ingredient['stock']); ?></td>
                             <td><?= htmlspecialchars($ingredient['unit']); ?></td>
                             <td>
+                                <span class="tag">
+                                    <?= $ingredient['is_consumable'] ? 'Consumable' : 'Non-Consumable'; ?>
+                                </span>
+                            <td>
                                 <span class="status-tag 
                                     <?= $ingredient['status'] === 'active' ? 'status-active' : 'status-inactive'; ?>">
                                     <?= ucfirst($ingredient['status']); ?>
                                 </span>
                             </td>
                             <td>
-                                <a href="#" class="edit edit-btn"
-                                    data-id="<?= $ingredient['id']; ?>"
-                                    data-name="<?= htmlspecialchars($ingredient['name']); ?>"
-                                    data-stock="<?= $ingredient['stock']; ?>"
-                                    data-unit="<?= $ingredient['unit']; ?>"
-                                    data-status="<?= $ingredient['status']; ?>"
-                                    data-bs-toggle="modal" data-bs-target="#updateIngredientModal">
+                                <a href="#" class="edit edit-btn" data-bs-toggle="modal"
+                                    data-bs-target="#updateIngredientModal<?= $ingredient['id']; ?>">
+
                                     Edit
                                 </a>
-                                <a href="admin_delivery.php?delete_ingredient=<?= $ingredient['id']; ?>" class="delete" onclick="return confirm('Delete this ingredient?');">
+                                <!-- Update Ingredient Modal -->
+                                <div class="modal fade" id="updateIngredientModal<?= $ingredient['id']; ?>" tabindex="-1"
+                                    aria-labelledby="updateIngredientModalLabel<?= $ingredient['id']; ?>" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Update Ingredient</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <form action="" method="POST">
+                                                    <input type="hidden" name="update_id" value="<?= $ingredient['id']; ?>">
+
+                                                    <label>Ingredient Name</label>
+                                                    <input type="text" name="name" class="form-control mb-2" required
+                                                        value="<?= htmlspecialchars($ingredient['name']); ?>">
+
+                                                    <label>Stock</label>
+                                                    <input type="number" name="stock" class="form-control mb-2" required
+                                                        value="<?= htmlspecialchars($ingredient['stock']); ?>">
+
+                                                    <label>Unit</label>
+                                                    <select name="unit" class="form-control mb-2" required>
+                                                        <option value="grams" <?= $ingredient['unit'] === 'grams' ? 'selected' : ''; ?>>Grams</option>
+                                                        <option value="milliliters" <?= $ingredient['unit'] === 'milliliters' ? 'selected' : ''; ?>>Milliliters</option>
+                                                        <option value="pieces" <?= $ingredient['unit'] === 'pieces' ? 'selected' : ''; ?>>Pieces</option>
+                                                    </select>
+
+                                                    <label>Status</label>
+                                                    <select name="status" class="form-control mb-2" required>
+                                                        <option value="active" <?= $ingredient['status'] === 'active' ? 'selected' : ''; ?>>Active</option>
+                                                        <option value="inactive" <?= $ingredient['status'] === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
+                                                    </select>
+
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="is_consumable"
+                                                            id="is_consumable_<?= $ingredient['id']; ?>" value="1"
+                                                            <?= $ingredient['is_consumable'] ? 'checked' : ''; ?>>
+                                                        <label class="form-check-label"
+                                                            for="is_consumable_<?= $ingredient['id']; ?>">
+                                                            Consumable
+                                                        </label>
+                                                    </div>
+
+                                                    <div class="modal-buttons">
+                                                        <button type="submit" class="save-btn"
+                                                            name="update_ingredient">Save</button>
+                                                        <button type="button" class="cancel-btn"
+                                                            data-bs-dismiss="modal">Cancel</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <a href="admin_delivery.php?delete_ingredient=<?= $ingredient['id']; ?>" class="delete"
+                                    onclick="return confirm('Delete this ingredient?');">
                                     Delete
                                 </a>
                             </td>
@@ -340,7 +411,8 @@ $ingredients = $show_ingredients->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <!-- Add Ingredient Modal -->
-    <div class="modal fade" id="addIngredientModal" tabindex="-1" aria-labelledby="addIngredientModalLabel" aria-hidden="true">
+    <div class="modal fade" id="addIngredientModal" tabindex="-1" aria-labelledby="addIngredientModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -350,10 +422,12 @@ $ingredients = $show_ingredients->fetchAll(PDO::FETCH_ASSOC);
                 <div class="modal-body">
                     <form action="" method="POST">
                         <label>Ingredient Name</label>
-                        <input type="text" name="name" class="form-control mb-2" required placeholder="Enter ingredient name">
+                        <input type="text" name="name" class="form-control mb-2" required
+                            placeholder="Enter ingredient name">
 
                         <label>Stock</label>
-                        <input type="number" name="stock" class="form-control mb-2" required placeholder="Enter stock quantity">
+                        <input type="number" name="stock" class="form-control mb-2" required
+                            placeholder="Enter stock quantity">
 
                         <label>Unit</label>
                         <select name="unit" class="form-control mb-2" required>
@@ -368,6 +442,13 @@ $ingredients = $show_ingredients->fetchAll(PDO::FETCH_ASSOC);
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
                         </select>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_consumable" id="is_consumable"
+                                value="1">
+                            <label class="form-check-label" for="is_consumable">
+                                Consumable
+                            </label>
+                        </div>
 
                         <div class="modal-buttons">
                             <button type="submit" class="save-btn" name="add_ingredient">Save</button>
@@ -379,64 +460,15 @@ $ingredients = $show_ingredients->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
-    <!-- Update Ingredient Modal -->
-    <div class="modal fade" id="updateIngredientModal" tabindex="-1" aria-labelledby="updateIngredientModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Update Ingredient</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form action="" method="POST">
-                        <input type="hidden" name="update_id" id="update_id">
 
-                        <label>Ingredient Name</label>
-                        <input type="text" name="name" id="update_name" class="form-control mb-2" required>
-
-                        <label>Stock</label>
-                        <input type="number" name="stock" id="update_stock" class="form-control mb-2" required>
-
-                        <label>Unit</label>
-                        <select name="unit" id="update_unit" class="form-control mb-2" required>
-                            <option value="grams">Grams</option>
-                            <option value="milliliters">Milliliters</option>
-                        </select>
-
-                        <label>Status</label>
-                        <select name="status" id="update_status" class="form-control mb-2" required>
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
-
-                        <div class="modal-buttons">
-                            <button type="submit" class="save-btn" name="update_ingredient">Update</button>
-                            <button type="button" class="cancel-btn" data-bs-dismiss="modal">Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            // Populate update modal with ingredient data
-            document.querySelectorAll(".edit-btn").forEach(button => {
-                button.addEventListener("click", function() {
-                    document.getElementById("update_id").value = this.dataset.id;
-                    document.getElementById("update_name").value = this.dataset.name;
-                    document.getElementById("update_stock").value = this.dataset.stock;
-                    document.getElementById("update_unit").value = this.dataset.unit;
-                    document.getElementById("update_status").value = this.dataset.status;
-                });
-            });
-
+        document.addEventListener("DOMContentLoaded", function () {
             // Search functionality
-            document.getElementById("searchInput").addEventListener("input", function() {
+            document.getElementById("searchInput").addEventListener("input", function () {
                 const searchTerm = this.value.toLowerCase();
                 const rows = document.querySelectorAll(".menu-table tbody tr");
 
@@ -450,8 +482,26 @@ $ingredients = $show_ingredients->fetchAll(PDO::FETCH_ASSOC);
                     }
                 });
             });
+
+            // Filter by consumable
+            document.getElementById("is_consumable").addEventListener("change", function () {
+                const filterValue = this.value;
+                const rows = document.querySelectorAll(".menu-table tbody tr");
+
+                rows.forEach(row => {
+
+                    const isConsumable = row.cells[4].textContent.trim() === (filterValue === "1" ? "Consumable" : "Non-Consumable");
+
+                    if (filterValue === "" || isConsumable) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+            });
         });
     </script>
 </body>
+
 </html>
 ```

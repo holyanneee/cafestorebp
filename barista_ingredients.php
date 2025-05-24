@@ -53,44 +53,25 @@ if ($order) {
 
   $products = [];
   foreach ($product_ids as $product) {
-    // Fetch product details
-    $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
-    $select_product->bindParam(1, $product, PDO::PARAM_INT);
-    $select_product->execute();
-    $product_details = $select_product->fetch(PDO::FETCH_ASSOC);
 
-    if ($product_details) {
-      // Fetch ingredients for the product
-      $product_id = $product_details['id'];
-      $select_ingredients = $conn->prepare("SELECT ingredients_names FROM barista_inventory WHERE product_id = ?");
-      $select_ingredients->bindParam(1, $product_id, PDO::PARAM_INT);
-      $select_ingredients->execute();
-      $ingredients = $select_ingredients->fetchAll(PDO::FETCH_COLUMN);
+    // get the price and quantity of the product
+    $select_order_products = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ? AND product_id = ?");
+    $select_order_products->bindParam(1, $order_id, PDO::PARAM_INT);
+    $select_order_products->bindParam(2, $product, PDO::PARAM_INT);
+    $select_order_products->execute();
+    $order_product = $select_order_products->fetch(PDO::FETCH_ASSOC);
+    $product_details['price'] = $order_product['price'];
+    $product_details['quantity'] = $order_product['quantity'];
 
-      $formatted_ingredients = [];
-      if ($ingredients) {
-        $formatted_ingredients = array_map('trim', explode(',', implode(',', $ingredients)));
-      }
-
-      // get the price and quantity of the product
-      $select_order_products = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ? AND product_id = ?");
-      $select_order_products->bindParam(1, $order_id, PDO::PARAM_INT);
-      $select_order_products->bindParam(2, $product_id, PDO::PARAM_INT);
-      $select_order_products->execute();
-      $order_product = $select_order_products->fetch(PDO::FETCH_ASSOC);
-      $product_details['price'] = $order_product['price'];
-      $product_details['quantity'] = $order_product['quantity'];
-
-      // Add the product to the array multiple times based on its quantity
-      for ($i = 0; $i < $product_details['quantity']; $i++) {
-        $products[] = [
-          'id' => $product_details['id'],
-          'name' => $product_details['name'],
-          'price' => $product_details['price'],
-          'image' => $product_details['image'],
-          'ingredients' => $formatted_ingredients,
-        ];
-      }
+    // Add the product to the array multiple times based on its quantity
+    for ($i = 0; $i < $product_details['quantity']; $i++) {
+      $products[] = [
+        'id' => $product_details['id'],
+        'name' => $product_details['name'],
+        'price' => $product_details['price'],
+        'image' => $product_details['image'],
+        'ingredients' => $formatted_ingredients,
+      ];
     }
   }
 } else {
@@ -301,12 +282,7 @@ $conn = null;
               </div>
             </div>
             <div class="ingredient-inputs">
-              <?php foreach ($product['ingredients'] as $ingredient): ?>
-                <label><?= htmlspecialchars($ingredient) ?>
-                  <input type="number" name="ingredients[<?= $key ?>][<?= htmlspecialchars($ingredient) ?>]" step="0.1"
-                    min="0">
-                </label>
-              <?php endforeach; ?>
+             
             </div>
           </div>
         <?php endforeach; ?>

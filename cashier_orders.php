@@ -86,6 +86,7 @@ if ($cashier_name) {
     LEFT JOIN `order_products` op ON o.id = op.order_id
     WHERE o.payment_status != ? AND o.cashier = ?  AND o.type = 'coffee'
     GROUP BY o.id
+        ORDER BY o.id 
 ");
 
     $select_orders->execute(['pending', $cashier_name]);
@@ -111,7 +112,7 @@ if ($cashier_name) {
                     return null; // Skip if product not found
                 }
 
-                // get the quntity and subtotal from order_products
+                // Get the quantity and subtotal from order_products
                 $select_order_product = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ? AND product_id = ?");
                 $select_order_product->execute([$order['order_id'], $product_id]);
                 $order_product = $select_order_product->fetch(PDO::FETCH_ASSOC);
@@ -126,10 +127,28 @@ if ($cashier_name) {
                     'name' => htmlspecialchars($product['name'] ?? '', ENT_QUOTES, 'UTF-8'),
                     'quantity' => htmlspecialchars($product['quantity'] ?? '0', ENT_QUOTES, 'UTF-8'),
                     'price' => number_format($product['price'] ?? 0, 2),
-                    'subtotal' => number_format($product['subtotal'] ?? 0, 2)
+                    'subtotal' => number_format($product['subtotal'] ?? 0, 2),
+                    'cup_sizes' => json_decode($order_product['cup_sizes'] ?? '[]', true) ?: [],
+                    'ingredients' => array_map(function ($ingredient) {
+                        return [
+                            'name' => htmlspecialchars($ingredient['name'] ?? '', ENT_QUOTES, 'UTF-8'),
+                            'level' => htmlspecialchars($ingredient['level'] ?? '', ENT_QUOTES, 'UTF-8')
+                        ];
+                    }, json_decode($order_product['ingredients'] ?? '[]', true) ?: []),
+                    'add_ons' => array_map(function ($addOn) {
+                        return [
+                            'name' => htmlspecialchars($addOn['name'] ?? '', ENT_QUOTES, 'UTF-8'),
+                            'price' => number_format($addOn['price'] ?? 0, 2)
+                        ];
+                    }, json_decode($order_product['add_ons'] ?? '[]', true) ?: []),
                 ];
             }, explode(',', $order['product_ids'])))
         ];
+
+        // Sort products by order_id
+        usort($formatted_orders, function ($a, $b) {
+            return $a['order_id'] <=> $b['order_id'];
+        });
     }
 
     $orders = $formatted_orders;
@@ -413,77 +432,7 @@ if ($cashier_name) {
                                                 Delete
                                             </a>
                                         <?php endif; ?>
-                                        <!-- modal -->
-                                        <div class="modal fade" id="viewOrderModal-<?= $order['order_id'] ?>" tabindex="-1"
-                                            aria-labelledby="viewOrderModalLabel" aria-hidden="true">
-                                            <div class="modal-dialog modal-lg">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="viewOrderModalLabel">Order Details -
-                                                            #<?= $order['order_id'] ?>
-                                                        </h5>
-                                                        <button type="button" class="btn-close btn-close-white"
-                                                            data-bs-dismiss="modal" aria-label="Close"></button>
-                                                    </div>
-                                                    <div class="modal-body" id="orderDetailsContent">
-                                                        <div class="row">
-                                                            <div class="col-md-6">
-                                                                <div class="order-details mb-2">
-                                                                    <strong>Customer Name:</strong>
-                                                                    <?= htmlspecialchars($order['name']) ?>
-                                                                </div>
-                                                                <div class="order-details mb-2">
-                                                                    <strong>Email:</strong>
-                                                                    <?= htmlspecialchars($order['email']) ?>
-                                                                </div>
-                                                            </div>
-                                                            <div class="col-md-6">
-                                                                <div class="order-details mb-2">
-                                                                    <strong>Order Date:</strong>
-                                                                    <?= $order_date ?>
-                                                                </div>
-                                                                <div class="order-details mb-2">
-                                                                    <strong>Status:</strong>
-                                                                    <span
-                                                                        class="status-badge <?= $status_class ?>"><?= ucfirst($order['payment_status']) ?></span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="order-details mb-3">
-                                                            <strong>Total Amount:</strong>
-                                                            ₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?>
-                                                        </div>
-                                                        <h2 class="fw-bold">Order Information:</h2>
-                                                        <table class="table table-bordered">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th>Product Name</th>
-                                                                    <th>Quantity</th>
-                                                                    <th>Price</th>
-                                                                    <th>Subtotal</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                <?php foreach ($order['products'] as $product): ?>
-                                                                    <tr>
-                                                                        <td><?= $product['name'] ?></td>
-                                                                        <td><?= $product['quantity'] ?></td>
-                                                                        <td>₱<?= number_format($product['price'], 2) ?></td>
-                                                                        <td>₱<?= number_format((float) str_replace(',', '', $product['subtotal']), 2) ?>
-                                                                        </td>
-                                                                    </tr>
-                                                                <?php endforeach; ?>
-                                                            </tbody>
-                                                        </table>
-
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary btn-sm"
-                                                            data-bs-dismiss="modal">Close</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <?php include 'view_order_modal.php'; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -551,6 +500,7 @@ if ($cashier_name) {
     </div>
 
     <script>
+        console.log(<?= json_encode($orders) ?>);
         // Initialize components
         const updateToast = new bootstrap.Toast(document.getElementById('updateToast'));
         const viewOrderModal = document.getElementById('viewOrderModal');

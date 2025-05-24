@@ -8,7 +8,7 @@ if (!$admin_id) {
     header('location:login.php');
     exit();
 }
-$type = 'regular';
+$type = 'coffee';
 
 // Delete Product
 if (isset($_GET['delete'])) {
@@ -21,11 +21,11 @@ if (isset($_GET['delete'])) {
 
 // Add Product
 if (isset($_POST['add_product'])) {
-    $name = filter_var($_POST['name'], FILTER_SANITIZE_STRING);
-    $category = filter_var($_POST['category'], FILTER_SANITIZE_STRING);
+    $name = filter_var($_POST['name'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+    $category = filter_var($_POST['category'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $price = filter_var($_POST['price'], FILTER_VALIDATE_FLOAT);
-    $details = filter_var($_POST['details'], FILTER_SANITIZE_STRING);
-    $status = filter_var($_POST['status'], FILTER_SANITIZE_STRING);
+    $details = filter_var($_POST['details'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+    $status = filter_var($_POST['status'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
     $image = $_FILES['image']['name'];
     $image_tmp_name = $_FILES['image']['tmp_name'];
@@ -36,9 +36,19 @@ if (isset($_POST['add_product'])) {
     $unique_image_name = 'prod_' . time() . '.' . $image_ext;
     $image_path = 'uploaded_img/' . $unique_image_name;
 
+    $cup_sizes = [];
+    if (isset($_POST['cup_sizes']) && isset($_POST['cup_prices'])) {
+        foreach ($_POST['cup_sizes'] as $size) {
+            if (isset($_POST['cup_prices'][$size])) {
+                $cup_sizes[$size] = floatval($_POST['cup_prices'][$size]);
+            }
+        }
+    }
+    $cup_sizes_json = json_encode($cup_sizes);
+
     if (move_uploaded_file($image_tmp_name, $image_path)) {
-        $insert_product = $conn->prepare("INSERT INTO products (name, category, price, details, status, image, type) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $insert_product->execute([$name, $category, $price, $details, $status, $unique_image_name, $type]);
+        $insert_product = $conn->prepare("INSERT INTO products (name, category, price, details, status, image, type, cup_sizes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $insert_product->execute([$name, $category, $price, $details, $status, $unique_image_name, $type, $cup_sizes_json]);
         header('location:admin_delivery.php');
         exit();
     }
@@ -47,29 +57,31 @@ if (isset($_POST['add_product'])) {
 // Update Product
 if (isset($_POST['update_product'])) {
     $update_id = $_POST['update_id'];
-    $name = filter_var($_POST['name'], FILTER_SANITIZE_STRING);
-    $category = filter_var($_POST['category'], FILTER_SANITIZE_STRING);
+    $name = filter_var($_POST['name'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+    $category = filter_var($_POST['category'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $price = filter_var($_POST['price'], FILTER_VALIDATE_FLOAT);
-    $details = filter_var($_POST['details'], FILTER_SANITIZE_STRING);
-    $status = filter_var($_POST['status'], FILTER_SANITIZE_STRING);
+    $details = filter_var($_POST['details'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+    $status = filter_var($_POST['status'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
     // Handle image upload
     $image = $_FILES['image']['name'];
     $image_tmp_name = $_FILES['image']['tmp_name'];
 
-    if (!empty($image)) {
-        $image_ext = pathinfo($image, PATHINFO_EXTENSION);
-        $unique_image_name = 'prod_' . time() . '.' . $image_ext;
-        $image_path = 'uploaded_img/' . $unique_image_name;
-        move_uploaded_file($image_tmp_name, $image_path);
+    if (isset($_POST['cup_sizes']) && isset($_POST['cup_prices'])) {
+        foreach ($_POST['cup_sizes'] as $size) {
+            if (isset($_POST['cup_prices'][$size])) {
+                $cup_sizes[$size] = floatval($_POST['cup_prices'][$size]);
+            }
+        }
+    }
+    $cup_sizes_json = json_encode($cup_sizes);
 
-        // Update with new image
-        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, price=?, details=?, status=?, image=?, type=? WHERE id=?");
-        $update_product->execute([$name, $category, $price, $details, $status, $unique_image_name, $type, $update_id]);
+    if (!empty($image)) {
+        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, price=?, details=?, status=?, image=?, type=?, cup_sizes=? WHERE id=?");
+        $update_product->execute([$name, $category, $price, $details, $status, $unique_image_name, $type, $cup_sizes_json, $update_id]);
     } else {
-        // Update without changing image
-        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, price=?, details=?, status=?, type=? WHERE id=?");
-        $update_product->execute([$name, $category, $price, $details, $status, $type, $update_id]);
+        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, price=?, details=?, status=?, type=?, cup_sizes=? WHERE id=?");
+        $update_product->execute([$name, $category, $price, $details, $status, $type, $cup_sizes_json, $update_id]);
     }
 
     header('location:admin_delivery.php');
@@ -80,24 +92,19 @@ if (isset($_POST['save_ingredients'])) {
     $ingredients = $_POST['ingredients'] ?? [];
 
     if (!empty($ingredients)) {
-        // Get ingredient names
+        // Get ingredient ids
         $placeholders = implode(',', array_fill(0, count($ingredients), '?'));
         $stmt = $conn->prepare("SELECT id, name FROM ingredients WHERE id IN ($placeholders)");
         $stmt->execute($ingredients);
         $selected = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $ingredient_ids = array_column($selected, 'id');
-        $ingredient_names = array_column($selected, 'name');
 
-        $ids_str = implode(', ', $ingredient_ids);
-        $names_str = implode(', ', $ingredient_names);
+        // update ingredients of the product
+        $update_ingredients = $conn->prepare("UPDATE products SET ingredients = ? WHERE id = ?");
+        $update_ingredients->execute([implode(',', $ingredient_ids), $product_id]);
 
-        // Optional: Clear previous entries for this product
-        $conn->prepare("DELETE FROM barista_inventory WHERE product_id = ?")->execute([$product_id]);
 
-        // Insert new entry
-        $insert = $conn->prepare("INSERT INTO barista_inventory (product_id, ingredients_id, ingredients_names) VALUES (?, ?, ?)");
-        $insert->execute([$product_id, $ids_str, $names_str]);
     }
 
     header("Location: admin_delivery.php");
@@ -106,7 +113,7 @@ if (isset($_POST['save_ingredients'])) {
 
 
 // Fetch all products
-$show_products = $conn->prepare("SELECT * FROM products WHERE type = 'regular' ORDER BY id DESC");
+$show_products = $conn->prepare("SELECT * FROM products WHERE type = 'coffee' ORDER BY id DESC");
 $show_products->execute();
 $products = $show_products->fetchAll(PDO::FETCH_ASSOC);
 
@@ -114,7 +121,7 @@ $products = $show_products->fetchAll(PDO::FETCH_ASSOC);
 function hasIngredients($product_id)
 {
     global $conn;
-    $stmt = $conn->prepare("SELECT * FROM barista_inventory WHERE product_id = ?");
+    $stmt = $conn->prepare("SELECT * FROM products WHERE id = ? AND ingredients IS NOT NULL");
     $stmt->execute([$product_id]);
     return $stmt->rowCount() > 0;
 }
@@ -410,16 +417,124 @@ function hasIngredients($product_id)
                                 </span>
                             </td>
                             <td>
-                                <a href="#" class="edit edit-btn" data-id="<?= $product['id']; ?>"
-                                    data-name="<?= htmlspecialchars($product['name']); ?>"
-                                    data-category="<?= htmlspecialchars($product['category']); ?>"
-                                    data-details="<?= htmlspecialchars($product['details']); ?>"
-                                    data-price="<?= htmlspecialchars($product['price']); ?>"
-                                    data-status="<?= htmlspecialchars($product['status']); ?>"
-                                    data-image="uploaded_img/<?= htmlspecialchars($product['image']); ?>" data-bs-toggle="modal"
-                                    data-bs-target="#updateProductModal">
-                                    Edit
-                                </a>
+                                <button class="action-btn btn-update" data-bs-toggle="modal"
+                                    data-bs-target="#updateProductModal-<?= $product['id'] ?>">
+                                    Update
+                                </button>
+                                <!-- update modal -->
+                                <div class="modal fade" id="updateProductModal-<?= $product['id']; ?>" tabindex="-1"
+                                    aria-labelledby="updateProductModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Update Product</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <form action="" method="POST" enctype="multipart/form-data">
+                                                    <input type="hidden" name="update_id" value="<?= $product['id']; ?>">
+
+                                                    <label>Product Name</label>
+                                                    <input type="text" name="name" class="form-control mb-2" required
+                                                        value="<?= htmlspecialchars($product['name']); ?>">
+
+                                                    <label>Category</label>
+                                                    <select name="category" class="form-control mb-2" required>
+                                                        <option value="Frappe" <?= $product['category'] === 'Frappe' ? 'selected' : ''; ?>>Frappe</option>
+                                                        <option value="Fruit Soda" <?= $product['category'] === 'Fruit Soda' ? 'selected' : ''; ?>>Fruit Soda</option>
+                                                        <option value="Frappe Extreme" <?= $product['category'] === 'Frappe Extreme' ? 'selected' : ''; ?>>Frappe Extreme</option>
+                                                        <option value="Milk Tea" <?= $product['category'] === 'Milk Tea' ? 'selected' : ''; ?>>Milk Tea</option>
+                                                        <option value="Fruit Tea" <?= $product['category'] === 'Fruit Tea' ? 'selected' : ''; ?>>Fruit Tea</option>
+                                                        <option value="Fruit Milk" <?= $product['category'] === 'Fruit Milk' ? 'selected' : ''; ?>>Fruit Milk</option>
+                                                        <option value="Espresso" <?= $product['category'] === 'Espresso' ? 'selected' : ''; ?>>Espresso</option>
+                                                        <option value="Hot Non-Coffee" <?= $product['category'] === 'Hot Non-Coffee' ? 'selected' : ''; ?>>Hot Non-Coffee</option>
+                                                        <option value="Iced Non-Coffee" <?= $product['category'] === 'Iced Non-Coffee' ? 'selected' : ''; ?>>Iced Non-Coffee</option>
+                                                        <option value="Meal" <?= $product['category'] === 'Meal' ? 'selected' : ''; ?>>Meal</option>
+                                                        <option value="Snacks" <?= $product['category'] === 'Snacks' ? 'selected' : ''; ?>>Snacks</option>
+                                                        <option value="Add-ons" <?= $product['category'] === 'Add-ons' ? 'selected' : ''; ?>>Add-ons</option>
+                                                    </select>
+
+                                                    <label>Price</label>
+                                                    <input type="number" min="0" name="price" class="form-control mb-2" required
+                                                        value="<?= htmlspecialchars($product['price']); ?>">
+
+                                                    <label>Description</label>
+                                                    <textarea name="details" class="form-control mb-2"
+                                                        required><?= htmlspecialchars($product['details']); ?></textarea>
+
+                                                    <label>Status</label>
+                                                    <select name="status" class="form-control mb-2" required>
+                                                        <option value="active" <?= $product['status'] === 'active' ? 'selected' : ''; ?>>Active</option>
+                                                        <option value="inactive" <?= $product['status'] === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
+                                                    </select>
+
+                                                    <label>Image</label>
+                                                    <input type="file" name="image" class="form-control mb-2"
+                                                        accept="image/jpg, image/jpeg, image/png">
+                                                    <img src="uploaded_img/<?= htmlspecialchars($product['image']); ?>"
+                                                        alt="<?= htmlspecialchars($product['name']); ?>"
+                                                        class="img-thumbnail mt-2" width="100">
+
+                                                    <label>Cup Sizes and Prices</label>
+                                                    <div class="mb-2">
+                                                        <?php
+                                                        $cup_sizes = isset($product['cup_sizes']) ? json_decode($product['cup_sizes'], true) : [];
+                                                        ?>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="cup_sizes[]"
+                                                                value="small" id="update_size_small"
+                                                                <?= isset($cup_sizes['small']) ? 'checked' : ''; ?>>
+                                                            <label class="form-check-label"
+                                                                for="update_size_small">Small</label>
+                                                            <input type="number" name="cup_prices[small]"
+                                                                class="form-control mt-1" placeholder="Price for Small" min="0"
+                                                                value="<?= $cup_sizes['small'] ?? ''; ?>">
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="cup_sizes[]"
+                                                                value="regular" id="update_size_regular"
+                                                                <?= isset($cup_sizes['regular']) ? 'checked' : ''; ?>>
+                                                            <label class="form-check-label"
+                                                                for="update_size_regular">Regular</label>
+                                                            <input type="number" name="cup_prices[regular]"
+                                                                class="form-control mt-1" placeholder="Price for Regular"
+                                                                min="0" value="<?= $cup_sizes['regular'] ?? ''; ?>">
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="cup_sizes[]"
+                                                                value="large" id="update_size_large"
+                                                                <?= isset($cup_sizes['large']) ? 'checked' : ''; ?>>
+                                                            <label class="form-check-label"
+                                                                for="update_size_large">Large</label>
+                                                            <input type="number" name="cup_prices[large]"
+                                                                class="form-control mt-1" placeholder="Price for Large" min="0"
+                                                                value="<?= $cup_sizes['large'] ?? ''; ?>">
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="cup_sizes[]"
+                                                                value="extra_large" id="update_size_extra_large"
+                                                                <?= isset($cup_sizes['extra_large']) ? 'checked' : ''; ?>>
+                                                            <label class="form-check-label" for="update_size_extra_large">Extra
+                                                                Large</label>
+                                                            <input type="number" name="cup_prices[extra_large]"
+                                                                class="form-control mt-1" placeholder="Price for Extra Large"
+                                                                min="0" value="<?= $cup_sizes['extra_large'] ?? ''; ?>">
+
+                                                        </div>
+                                                    </div>
+                                            </div>
+
+                                            <div class="modal-buttons">
+                                                <button type="submit" class="save-btn" name="update_product">Update</button>
+                                                <button type="button" class="cancel-btn" data-bs-dismiss="modal">Cancel</button>
+                                            </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+
                                 <a href="admin_set_ingredients.php?id=<?= $product['id']; ?>" class="edit edit-btn 
                                 <?= hasIngredients($product['id']) ? 'has-ingredients' : ''; ?>">
                                     Ingredients
@@ -490,6 +605,38 @@ function hasIngredients($product_id)
                         <input type="file" name="image" required class="form-control mb-2"
                             accept="image/jpg, image/jpeg, image/png">
 
+                        <label>Cup Sizes and Prices</label>
+                        <div class="mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="cup_sizes[]" value="small"
+                                    id="size_small">
+                                <label class="form-check-label" for="size_small">Small</label>
+                                <input type="number" name="cup_prices[small]" class="form-control mt-1"
+                                    placeholder="Price for Small" min="0">
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="cup_sizes[]" value="regular"
+                                    id="size_regular">
+                                <label class="form-check-label" for="size_regular">Regular</label>
+                                <input type="number" name="cup_prices[regular]" class="form-control mt-1"
+                                    placeholder="Price for Regular" min="0">
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="cup_sizes[]" value="large"
+                                    id="size_large">
+                                <label class="form-check-label" for="size_large">Large</label>
+                                <input type="number" name="cup_prices[large]" class="form-control mt-1"
+                                    placeholder="Price for Large" min="0">
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="cup_sizes[]" value="extra_large"
+                                    id="extra_large">
+                                <label class="form-check-label" for="extra_large">Extra Large</label>
+                                <input type="number" name="cup_prices[extra_large]" class="form-control mt-1"
+                                    placeholder="Price for Extra Large" min="0">
+                            </div>
+                        </div>
+
                         <div class="modal-buttons">
                             <button type="submit" class="save-btn" name="add_product">Save</button>
                             <button type="button" class="cancel-btn" data-bs-dismiss="modal">Cancel</button>
@@ -500,66 +647,6 @@ function hasIngredients($product_id)
         </div>
     </div>
 
-    <!-- Update Product Modal -->
-    <div class="modal fade" id="updateProductModal" tabindex="-1" aria-labelledby="updateProductModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Update Product</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form action="" method="POST" enctype="multipart/form-data">
-                        <input type="hidden" name="update_id" id="update_id">
-
-                        <label>Product Name</label>
-                        <input type="text" name="name" id="update_name" class="form-control mb-2" required>
-
-                        <label>Category</label>
-                        <select name="category" id="update_category" class="form-control mb-2" required>
-                            <option value="Frappe">Frappe</option>
-                            <option value="Fruit Soda">Fruit Soda</option>
-                            <option value="Frappe Extreme">Frappe Extreme</option>
-                            <option value="Milk Tea">Milk Tea</option>
-                            <option value="Fruit Tea">Fruit Tea</option>
-                            <option value="Fruit Milk">Fruit Milk</option>
-                            <option value="Espresso">Espresso</option>
-                            <option value="Hot Non-Coffee">Hot Non-Coffee</option>
-                            <option value="Iced Non-Coffee">Iced Non-Coffee</option>
-                            <option value="Meal">Meal</option>
-                            <option value="Snacks">Snacks</option>
-                            <option value="Add-ons">Add-ons</option>
-                        </select>
-
-                        <label>Price</label>
-                        <input type="number" min="0" name="price" id="update_price" class="form-control mb-2" required>
-
-                        <label>Description</label>
-                        <textarea name="details" id="update_details" class="form-control mb-2" required></textarea>
-
-                        <label>Status</label>
-                        <select name="status" id="update_status" class="form-control mb-2" required>
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
-
-                        <label>Current Image</label>
-                        <img id="update_image" src="" class="img-fluid mb-2" style="max-height: 150px; display: block;">
-
-                        <label>New Image (Leave blank to keep current)</label>
-                        <input type="file" name="image" class="form-control mb-2"
-                            accept="image/jpg, image/jpeg, image/png">
-
-                        <div class="modal-buttons">
-                            <button type="submit" class="save-btn" name="update_product">Update</button>
-                            <button type="button" class="cancel-btn" data-bs-dismiss="modal">Cancel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <div class="modal fade" id="ingredientsModal" tabindex="-1" aria-labelledby="ingredientsModalLabel"
         aria-hidden="true">

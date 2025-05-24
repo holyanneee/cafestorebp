@@ -9,21 +9,57 @@ if (!$admin_id) {
     exit();
 }
 
-
-// Handle AJAX update (silent version)
-if (isset($_POST['update_order']) && isset($_POST['is_ajax'])) {
-    $order_id = $_POST['order_id'];
-    $update_payment = $_POST['update_payment'];
-    $update_payment = filter_var($update_payment, FILTER_SANITIZE_STRING);
-
-    // Update both payment status and cashier in the orders table
+if (isset($_GET['order_id'])) {
+    $order_id = $_GET['order_id'];
+    $update_payment = 'completed'; // Set the payment status to completed
     $update_orders = $conn->prepare("UPDATE `orders` SET payment_status = ?, cashier = ? WHERE id = ?");
     $update_orders->execute([$update_payment, $cashier_name, $order_id]);
 
-    http_response_code(204); // No Content
-    header('location:cashier_online_order_placed.php');
+    // deduct the stock of products in order_products
+    $select_order_products = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ?");
+    $select_order_products->execute([$order_id]);
+    $order_products = $select_order_products->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($order_products as $order_product) {
+        $product_id = $order_product['product_id'];
+        $quantity = $order_product['quantity'];
+        $ingredients = json_decode($order_product['ingredients'], true) ?: [];
+        $add_ons = json_decode($order_product['add_ons'], true) ?: [];
+
+        // Update the stock on the ingredients table
+        foreach ($ingredients as $ingredient_id => $ingredient) {
+            // Deduct the quantity from the stock for each ingredient
+            $update_ingredient = $conn->prepare("UPDATE `ingredients` SET stock = GREATEST(stock - ?, 0) WHERE id = ?");
+            $update_ingredient->execute([$quantity, $ingredient_id]);
+        }
+
+        $cup_size_data = json_decode($order_product['cup_sizes'], true);
+
+        if (!empty($cup_size_data) && is_array($cup_size_data)) {
+            $cup_size_name = 'cup ' . strtolower($cup_size_data['size']);
+
+            // Fetch the ingredient matching the cup size name (e.g., "Cup Large")
+            $select_ingredient = $conn->prepare("SELECT * FROM `ingredients` WHERE LOWER(name) = ? AND is_consumable = 0");
+            $select_ingredient->execute([strtolower($cup_size_name)]);
+            $ingredient = $select_ingredient->fetch(PDO::FETCH_ASSOC);
+
+            if ($ingredient) {
+                // Deduct the quantity from stock for the matching ingredient
+                $update_ingredient = $conn->prepare("UPDATE `ingredients` SET stock = GREATEST(stock - ?, 0) WHERE id = ?");
+                $update_ingredient->execute([$quantity, $ingredient['id']]);
+            }
+        }
+
+    }
+
+
+    // Redirect to the same page to avoid resubmission
+    header('location:barista_ongoing_order.php');
     exit();
 }
+
+
+
 
 
 // Handle regular form submission
@@ -102,7 +138,20 @@ foreach ($orders as $order) {
                 'name' => htmlspecialchars($product['name'] ?? '', ENT_QUOTES, 'UTF-8'),
                 'quantity' => htmlspecialchars($product['quantity'] ?? '0', ENT_QUOTES, 'UTF-8'),
                 'price' => number_format($product['price'] ?? 0, 2),
-                'subtotal' => number_format($product['subtotal'] ?? 0, 2)
+                'subtotal' => number_format($product['subtotal'] ?? 0, 2),
+                'cup_sizes' => json_decode($order_product['cup_sizes'] ?? '[]', true) ?: [],
+                'ingredients' => array_map(function ($ingredient) {
+                    return [
+                        'name' => htmlspecialchars($ingredient['name'] ?? '', ENT_QUOTES, 'UTF-8'),
+                        'level' => htmlspecialchars($ingredient['level'] ?? '', ENT_QUOTES, 'UTF-8')
+                    ];
+                }, json_decode($order_product['ingredients'] ?? '[]', true) ?: []),
+                'add_ons' => array_map(function ($addOn) {
+                    return [
+                        'name' => htmlspecialchars($addOn['name'] ?? '', ENT_QUOTES, 'UTF-8'),
+                        'price' => number_format($addOn['price'] ?? 0, 2)
+                    ];
+                }, json_decode($order_product['add_ons'] ?? '[]', true) ?: []),
             ];
         }, explode(',', $order['product_ids'])))
     ];
@@ -363,79 +412,10 @@ $orders = $formatted_orders;
                                             View
                                         </button>
                                         <!-- modal -->
-                                        <div class="modal fade" id="viewOrderModal-<?= $order['order_id'] ?>" tabindex="-1"
-                                            aria-labelledby="viewOrderModalLabel" aria-hidden="true">
-                                            <div class="modal-dialog modal-lg">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="viewOrderModalLabel">Order Details -
-                                                            #<?= $order['order_id'] ?>
-                                                        </h5>
-                                                        <button type="button" class="btn-close btn-close-white"
-                                                            data-bs-dismiss="modal" aria-label="Close"></button>
-                                                    </div>
-                                                    <div class="modal-body" id="orderDetailsContent">
-                                                        <div class="row">
-                                                            <div class="col-md-6">
-                                                                <div class="order-details mb-2">
-                                                                    <strong>Customer Name:</strong>
-                                                                    <?= htmlspecialchars($order['name']) ?>
-                                                                </div>
-                                                                <div class="order-details mb-2">
-                                                                    <strong>Email:</strong>
-                                                                    <?= htmlspecialchars($order['email']) ?>
-                                                                </div>
-                                                            </div>
-                                                            <div class="col-md-6">
-                                                                <div class="order-details mb-2">
-                                                                    <strong>Order Date:</strong>
-                                                                    <?= $order_date ?>
-                                                                </div>
-                                                                <div class="order-details mb-2">
-                                                                    <strong>Status:</strong>
-                                                                    <span
-                                                                        class="status-badge <?= $status_class ?>"><?= ucfirst($order['payment_status']) ?></span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="order-details mb-3">
-                                                            <strong>Total Amount:</strong>
-                                                            ₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?>
-                                                        </div>
-                                                        <h2 class="fw-bold">Order Information:</h2>
-                                                        <table class="table table-bordered">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th>Product Name</th>
-                                                                    <th>Quantity</th>
-                                                                    <th>Price</th>
-                                                                    <th>Subtotal</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                <?php foreach ($order['products'] as $product): ?>
-                                                                    <tr>
-                                                                        <td><?= $product['name'] ?></td>
-                                                                        <td><?= $product['quantity'] ?></td>
-                                                                        <td>₱<?= number_format($product['price'], 2) ?></td>
-                                                                        <td>₱<?= number_format((float) str_replace(',', '', $product['subtotal']), 2) ?>
-                                                                        </td>
-                                                                    </tr>
-                                                                <?php endforeach; ?>
-                                                            </tbody>
-                                                        </table>
-
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary btn-sm"
-                                                            data-bs-dismiss="modal">Close</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <a href="barista_ingredients.php?order_id=<?= $order['order_id'] ?>"
+                                        <?php include 'view_order_modal.php'; ?>
+                                        <a href="barista_ongoing_order.php?order_id=<?= $order['order_id'] ?>"
                                             class="action-btn btn-update" style="text-decoration: none;">
-                                            Update
+                                            Complete the Order
                                         </a>
                                     </td>
                                 </tr>

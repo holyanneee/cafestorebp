@@ -23,14 +23,12 @@ $ingredients_stmt = $conn->prepare("SELECT * FROM ingredients");
 $ingredients_stmt->execute();
 $all_ingredients = $ingredients_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch already selected ingredients
-$selected_stmt = $conn->prepare("SELECT ingredients_id FROM barista_inventory WHERE product_id = ?");
-$selected_stmt->execute([$product_id]);
-$selected_result = $selected_stmt->fetch(PDO::FETCH_ASSOC);
+// Fetch already selected ingredients from products
 $selected_ids = [];
-if ($selected_result && !empty($selected_result['ingredients_id'])) {
-    $selected_ids = array_map('intval', explode(',', $selected_result['ingredients_id']));
+if (!empty($product['ingredients'])) {
+    $selected_ids = json_decode($product['ingredients'], true);
 }
+
 
 // Handle saving
 if (isset($_POST['save_ingredients'])) {
@@ -45,21 +43,12 @@ if (isset($_POST['save_ingredients'])) {
         $stmt->execute($ingredient_ids);
         $selected = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $ids_str = implode(', ', array_column($selected, 'id'));
-        $names_str = implode(', ', array_column($selected, 'name'));
-
-        // Check if record exists
-        $check_stmt = $conn->prepare("SELECT COUNT(*) FROM barista_inventory WHERE product_id = ?");
-        $check_stmt->execute([$product_id]);
-        $exists = $check_stmt->fetchColumn();
-
-        if ($exists) {
-            $update = $conn->prepare("UPDATE barista_inventory SET ingredients_id = ?, ingredients_names = ? WHERE product_id = ?");
-            $update->execute([$ids_str, $names_str, $product_id]);
-        } else {
-            $insert = $conn->prepare("INSERT INTO barista_inventory (product_id, ingredients_id, ingredients_names) VALUES (?, ?, ?)");
-            $insert->execute([$product_id, $ids_str, $names_str]);
-        }
+        // Convert to JSON
+        $json_ingredients = json_encode(array_column($selected, 'id'));
+        // Update product with selected ingredients
+        $update_stmt = $conn->prepare("UPDATE products SET ingredients = ? WHERE id = ?");
+        $update_stmt->execute([$json_ingredients, $product_id]);
+       
     }
 
     header("Location: admin_delivery.php");

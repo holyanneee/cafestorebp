@@ -43,6 +43,17 @@ $topFiveProductsQuery = "SELECT op.product_id, p.name, SUM(op.price * op.quantit
 $stmt = $conn->prepare($topFiveProductsQuery);
 $stmt->execute();
 $topFiveProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$earningsByType = [];
+
+// Calculate earnings by product type
+$productTypesQuery = "SELECT p.type, SUM(op.price * op.quantity) AS total_earnings FROM order_products op JOIN products p ON op.product_id = p.id GROUP BY p.type";
+$stmt = $conn->prepare($productTypesQuery);
+$stmt->execute();
+while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    $earningsByType[$row['type']] = (float) $row['total_earnings'];
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -298,6 +309,13 @@ $topFiveProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
             </div>
 
+            <!-- Earnings by Product Type -->
+             <div class="col-xl-4 col lg-5">
+                 <div class="card p-3" style="height: 400px;">
+                     <canvas id="earningsByProductTypeCanvas" width="400" height="400"></canvas>
+                 </div>
+             </div>
+
 
         </div>
     </div>
@@ -341,6 +359,21 @@ $topFiveProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 datasets: [
                     { label: 'Monthly Products Sold', data: soldProductsPerMonthData, borderColor: '#4a6fdc', fill: false },
                 ]
+            }
+        });
+
+        const earningsByTypePieChart = document.getElementById('earningsByProductTypeCanvas').getContext('2d');
+        const earningsByTypeData = <?php echo json_encode(array_values($earningsByType)); ?>;
+        const earningsByTypeLabels = <?php echo json_encode(array_keys($earningsByType)); ?>;
+        new Chart(earningsByTypePieChart, {
+            type: 'pie',
+            data: {
+                labels: earningsByTypeLabels,
+                datasets: [{
+                    label: 'Earnings by Product Type',
+                    data: earningsByTypeData,
+                    backgroundColor: ['#4a6fdc', '#27ae60', '#e67e22', '#d32f2f', '#9b59b6']
+                }]
             }
         });
     </script>

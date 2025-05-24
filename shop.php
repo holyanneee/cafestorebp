@@ -13,7 +13,7 @@ if (!isset($user_id)) {
 
 if (isset($_POST['add_to_wishlist'])) {
 
-    $pid = filter_var($_POST['pid'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+    $product_id = filter_var($_POST['product_id'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $p_name = filter_var($_POST['p_name'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $p_price = filter_var($_POST['p_price'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $p_image = filter_var($_POST['p_image'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
@@ -29,15 +29,15 @@ if (isset($_POST['add_to_wishlist'])) {
     } elseif ($check_cart_numbers->rowCount() > 0) {
         $message[] = 'already added to cart!';
     } else {
-        $insert_wishlist = $conn->prepare("INSERT INTO `wishlist`(user_id, pid, name, price, image) VALUES(?,?,?,?,?)");
-        $insert_wishlist->execute([$user_id, $pid, $p_name, $p_price, $p_image]);
+        $insert_wishlist = $conn->prepare("INSERT INTO `wishlist`(user_id, product_id, name, price, image) VALUES(?,?,?,?,?)");
+        $insert_wishlist->execute([$user_id, $product_id, $p_name, $p_price, $p_image]);
         $message[] = 'added to wishlist!';
     }
 }
 
 if (isset($_POST['add_to_cart'])) {
 
-    $pid = filter_var($_POST['pid'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+    $product_id = filter_var($_POST['product_id'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $p_name = filter_var($_POST['p_name'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $p_price = filter_var($_POST['p_price'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $p_image = filter_var($_POST['p_image'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
@@ -57,8 +57,8 @@ if (isset($_POST['add_to_cart'])) {
             $delete_wishlist->execute([$p_name, $user_id]);
         }
 
-        $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, pid, name, price, quantity, image) VALUES(?,?,?,?,?,?)");
-        $insert_cart->execute([$user_id, $pid, $p_name, $p_price, $p_qty, $p_image]);
+        $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, product_id, name, price, quantity, image) VALUES(?,?,?,?,?,?)");
+        $insert_cart->execute([$user_id, $product_id, $p_name, $p_price, $p_qty, $p_image]);
         $message[] = 'added to cart!';
     }
 }
@@ -146,10 +146,10 @@ if (isset($_POST['add_to_cart'])) {
    ?>
    <form action="" class="box" method="POST">
       <div class="price">₱<span><?= $fetch_products['price']; ?></span></div>
-      <a href="view_page.php?pid=<?= $fetch_products['id']; ?>" class="fas fa-eye"></a>
+      <a href="view_page.php?product_id=<?= $fetch_products['id']; ?>" class="fas fa-eye"></a>
       <img src="uploaded_img/<?= $fetch_products['image']; ?>" alt="">
       <div class="name"><?= $fetch_products['name']; ?></div>
-      <input type="hidden" name="pid" value="<?= $fetch_products['id']; ?>">
+      <input type="hidden" name="product_id" value="<?= $fetch_products['id']; ?>">
       <input type="hidden" name="p_name" value="<?= $fetch_products['name']; ?>">
       <input type="hidden" name="p_price" value="<?= $fetch_products['price']; ?>">
       <input type="hidden" name="p_image" value="<?= $fetch_products['image']; ?>">
