@@ -10,32 +10,6 @@ if (!isset($user_id)) {
    exit();
 }
 
-// Delete single item
-if (isset($_GET['delete'])) {
-   $delete_id = $_GET['delete'];
-   $delete_cart_item = $conn->prepare("DELETE FROM `cart` WHERE id = ?");
-   $delete_cart_item->execute([$delete_id]);
-   header('location:cart.php');
-   exit();
-}
-
-// Delete all cart items for user
-if (isset($_GET['delete_all'])) {
-   $delete_cart_item = $conn->prepare("DELETE FROM `cart` WHERE user_id = ?");
-   $delete_cart_item->execute([$user_id]);
-   header('location:cart.php');
-   exit();
-}
-
-// Update quantity
-if (isset($_POST['update_qty'])) {
-   $cart_id = $_POST['cart_id'];
-   $p_qty = $_POST['p_qty'];
-   $p_qty = filter_var($p_qty, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-   $update_qty = $conn->prepare("UPDATE `cart` SET quantity = ? WHERE id = ?");
-   $update_qty->execute([$p_qty, $cart_id]);
-   $message[] = 'Cart quantity updated';
-}
 
 ?>
 
@@ -54,8 +28,8 @@ if (isset($_POST['update_qty'])) {
    <!-- Custom CSS -->
    <link rel="stylesheet" href="css/style.css">
 
-  <style>
-      .button{
+   <style>
+      .button {
          padding: 10px 20px;
          border: none;
          border-radius: 5px;
@@ -63,36 +37,44 @@ if (isset($_POST['update_qty'])) {
          font-size: 16px;
          background: none;
       }
+
       .button-success {
          background-color: transparent;
          color: #28a745;
          border: 2px solid #28a745;
          transition: all 0.3s ease;
       }
-      .button-success:hover, .button-success:focus {
+
+      .button-success:hover,
+      .button-success:focus {
          background-color: #28a745;
          color: #fff;
          outline: none;
       }
+
       .button-danger {
          background-color: transparent;
          color: #dc3545;
          border: 2px solid #dc3545;
          transition: all 0.3s ease;
       }
-      .button-danger:hover, .button-danger:focus {
+
+      .button-danger:hover,
+      .button-danger:focus {
          background-color: #dc3545;
          color: #fff;
          outline: none;
       }
 
-      .row{
+      .row {
          display: flex;
          flex-wrap: wrap;
          margin-right: -15px;
          margin-left: -15px;
       }
-      .col-md-8, .col-md-4 {
+
+      .col-md-8,
+      .col-md-4 {
          position: relative;
          width: 100%;
          padding-right: 15px;
@@ -103,42 +85,52 @@ if (isset($_POST['update_qty'])) {
          flex: 0 0 66.666667%;
          max-width: 66.666667%;
       }
+
       .col-md-4 {
          flex: 0 0 33.333333%;
          max-width: 33.333333%;
       }
+
       .card {
          border: 1px solid #ddd;
          border-radius: 5px;
          margin-bottom: 20px;
          background-color: #fff;
       }
+
       .card-body {
          padding: 20px;
       }
+
       .card-title {
          font-size: 1.25rem;
          margin-bottom: 0.5rem;
       }
+
       .card-text {
          margin-bottom: 1rem;
       }
+
       .shopping-cart {
          padding: 50px 0;
          background-color: #f8f9fa;
       }
+
       .shopping-cart h1 {
          font-size: 2rem;
          margin-bottom: 20px;
       }
+
       .shopping-cart .card {
          margin-bottom: 20px;
       }
+
       .shopping-cart .card img {
          max-width: 100%;
          height: auto;
          border-radius: 5px;
       }
+
       .shopping-cart .card-body {
          padding: 20px;
       }
@@ -147,6 +139,7 @@ if (isset($_POST['update_qty'])) {
          font-size: 1.25rem;
          margin-bottom: 10px;
       }
+
       input[type="number"] {
          width: 80px;
          padding: 5px;
@@ -154,8 +147,7 @@ if (isset($_POST['update_qty'])) {
          border-radius: 5px;
          margin-right: 10px;
       }
-
-  </style>
+   </style>
 </head>
 
 <body>
@@ -170,12 +162,15 @@ if (isset($_POST['update_qty'])) {
 
                <?php
                $grand_total = 0;
-               $select_cart = $conn->prepare("SELECT * FROM `cart` WHERE user_id = ?");
+               $select_cart = $conn->prepare("SELECT cart.*, products.name, products.price, products.image FROM `cart` 
+                                       JOIN `products` ON cart.product_id = products.id 
+                                       WHERE cart.user_id = ?");
                $select_cart->execute([$user_id]);
                $cart_items = $select_cart->fetchAll(PDO::FETCH_ASSOC);
                ?>
 
-               <?php if ($select_cart->rowCount() > 0): ?>
+
+               <?php if ($select_cart): ?>
                   <?php foreach ($cart_items as $item): ?>
                      <?php $sub_total = $item['price'] * $item['quantity']; ?>
                      <?php $grand_total += $sub_total; ?>
@@ -183,20 +178,21 @@ if (isset($_POST['update_qty'])) {
                      <div class="card mb-3" style="max-width: 540px;">
                         <div class="row g-0">
                            <div class="col-md-4">
-                              <img src="uploaded_img/<?= $item['image']; ?>" class="img-fluid rounded-start" style="height: 200px; width: 100%; object-fit: cover;"
-                                 alt="<?= $item['name']; ?>">
+                              <img src="uploaded_img/<?= $item['image']; ?>" class="img-fluid rounded-start"
+                                 style="height: 200px; width: 100%; object-fit: cover;" alt="<?= $item['name']; ?>">
                            </div>
                            <div class="col-md-8">
                               <div class="card-body">
                                  <h5 class="card-title"><?= $item['name']; ?></h5>
                                  <p class="card-text">₱<?= $item['price']; ?> x <?= $item['quantity']; ?> =
-                                    <strong>₱<?= $sub_total; ?></strong></p>
+                                    <strong>₱<?= $sub_total; ?></strong>
+                                 </p>
                                  <form action="" method="post" class="d-flex align-items-center gap-2">
                                     <input type="hidden" name="cart_id" value="<?= $item['id']; ?>">
                                     <input type="number" name="p_qty" value="<?= $item['quantity']; ?>" min="1"
                                        class="form-control" style="width: 80px;">
-                                       <button type="submit" name="update_qty" class="button button-success">Update</button>
-                                       <a href="cart.php?delete=<?= $item['id']; ?>" class="button button-danger"
+                                    <button type="submit" name="update_qty" class="button button-success">Update</button>
+                                    <a href="cart.php?delete=<?= $item['id']; ?>" class="button button-danger"
                                        onclick="return confirm('Remove this item?');">Remove</a>
                                  </form>
                               </div>

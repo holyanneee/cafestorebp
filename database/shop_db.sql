@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: May 24, 2025 at 04:13 PM
+-- Generation Time: May 25, 2025 at 04:29 PM
 -- Server version: 8.0.30
 -- PHP Version: 8.2.27
 
@@ -31,18 +31,20 @@ CREATE TABLE `cart` (
   `id` int NOT NULL,
   `user_id` int NOT NULL,
   `product_id` int NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `price` int NOT NULL,
-  `quantity` int NOT NULL,
-  `image` varchar(100) COLLATE utf8mb4_general_ci NOT NULL
+  `quantity` int NOT NULL DEFAULT '0',
+  `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `cart`
 --
 
-INSERT INTO `cart` (`id`, `user_id`, `product_id`, `name`, `price`, `quantity`, `image`) VALUES
-(60, 34, 30, 'yeye', 89, 1, 'prod_1745071708.jpg');
+INSERT INTO `cart` (`id`, `user_id`, `product_id`, `quantity`, `type`) VALUES
+(60, 34, 30, 0, 'coffee'),
+(67, 42, 40, 0, 'coffee'),
+(68, 42, 38, 0, 'coffee'),
+(69, 42, 37, 0, 'coffee'),
+(70, 42, 24, 0, 'coffee');
 
 -- --------------------------------------------------------
 
@@ -151,7 +153,7 @@ CREATE TABLE `order_products` (
   `add_ons` json DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `order_products`
@@ -245,11 +247,18 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `user_type`, `image`, `r
 CREATE TABLE `wishlist` (
   `id` int NOT NULL,
   `user_id` int NOT NULL,
-  `pid` int NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `price` int NOT NULL,
-  `image` varchar(100) COLLATE utf8mb4_general_ci NOT NULL
+  `product_id` int NOT NULL,
+  `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `wishlist`
+--
+
+INSERT INTO `wishlist` (`id`, `user_id`, `product_id`, `type`) VALUES
+(52, 42, 39, 'coffee'),
+(54, 42, 38, 'coffee'),
+(56, 42, 30, 'coffee');
 
 --
 -- Indexes for dumped tables
@@ -320,7 +329,7 @@ ALTER TABLE `wishlist`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=71;
 
 --
 -- AUTO_INCREMENT for table `deliveries`
@@ -368,7 +377,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `wishlist`
 --
 ALTER TABLE `wishlist`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- Constraints for dumped tables
