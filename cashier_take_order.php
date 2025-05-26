@@ -100,9 +100,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_data'])) {
    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
    <link rel="stylesheet" href="css/admin_style.css">
-   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.5.0/nouislider.min.css">
 
    <style>
+      
       .pos-container {
          display: flex;
          gap: 20px;
@@ -436,7 +436,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_data'])) {
       }
 
       .form-check-label {
-         font-size: 1.1rem;
+         font-size: 1.5rem;
+         color: #2c3e50;
+         margin-right: 10px;
          cursor: pointer;
       }
 
@@ -530,11 +532,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_data'])) {
 
       }
 
-      .form-check-label {
-         font-size: 1.5rem;
-         color: #2c3e50;
-         margin-right: 10px;
-      }
+
 
       .slider-label {
          font-size: 1.5rem;

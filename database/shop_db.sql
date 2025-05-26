@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: May 25, 2025 at 04:29 PM
+-- Generation Time: May 26, 2025 at 04:50 PM
 -- Server version: 8.0.30
 -- PHP Version: 8.2.27
 
@@ -32,19 +32,21 @@ CREATE TABLE `cart` (
   `user_id` int NOT NULL,
   `product_id` int NOT NULL,
   `quantity` int NOT NULL DEFAULT '0',
-  `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee'
+  `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee',
+  `cup_size` json DEFAULT NULL,
+  `add_ons` json DEFAULT NULL,
+  `ingredients` json DEFAULT NULL,
+  `special_instruction` text COLLATE utf8mb4_general_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `cart`
 --
 
-INSERT INTO `cart` (`id`, `user_id`, `product_id`, `quantity`, `type`) VALUES
-(60, 34, 30, 0, 'coffee'),
-(67, 42, 40, 0, 'coffee'),
-(68, 42, 38, 0, 'coffee'),
-(69, 42, 37, 0, 'coffee'),
-(70, 42, 24, 0, 'coffee');
+INSERT INTO `cart` (`id`, `user_id`, `product_id`, `quantity`, `type`, `cup_size`, `add_ons`, `ingredients`, `special_instruction`) VALUES
+(73, 42, 38, 1, 'coffee', NULL, NULL, NULL, NULL),
+(74, 42, 37, 1, 'coffee', NULL, NULL, NULL, NULL),
+(75, 42, 39, 1, 'coffee', NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -115,12 +117,12 @@ CREATE TABLE `orders` (
   `email` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
   `method` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
   `address` varchar(500) COLLATE utf8mb4_general_ci NOT NULL,
-  `payment_status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'on Queue',
+  `payment_status` varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'on Queue',
   `cashier` text COLLATE utf8mb4_general_ci,
   `receipt` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `barista` text COLLATE utf8mb4_general_ci,
   `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee',
-  `placed_on` timestamp NOT NULL
+  `placed_on` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -148,12 +150,12 @@ CREATE TABLE `order_products` (
   `quantity` int NOT NULL,
   `price` decimal(10,2) NOT NULL,
   `subtotal` decimal(10,2) NOT NULL DEFAULT '0.00',
-  `ingredients` json DEFAULT NULL,
-  `cup_sizes` json DEFAULT NULL,
-  `add_ons` json DEFAULT NULL,
+  `ingredients` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `cup_sizes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `add_ons` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ;
 
 --
 -- Dumping data for table `order_products`
@@ -187,13 +189,13 @@ CREATE TABLE `products` (
   `category` varchar(20) COLLATE utf8mb4_general_ci NOT NULL,
   `details` varchar(500) COLLATE utf8mb4_general_ci NOT NULL,
   `price` int NOT NULL,
-  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'active',
+  `status` varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'active',
   `stock` int DEFAULT '0',
   `image` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
   `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee',
-  `ingredients` json DEFAULT NULL,
-  `cup_sizes` json DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  `ingredients` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `cup_sizes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin
+) ;
 
 --
 -- Dumping data for table `products`
@@ -206,7 +208,10 @@ INSERT INTO `products` (`id`, `name`, `category`, `details`, `price`, `status`, 
 (38, 'Frappe 2', 'Frappe', 'asd', 250, 'active', 0, 'prod_1746071904.jpg', 'coffee', '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
 (39, 'frappuchino', 'Frappe', 'frappe ng mga Chinese', 300, 'active', 0, 'prod_1746071952.jpg', 'coffee', '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
 (40, 'Brusko', 'Espresso', 'N-word Coffee', 100, 'active', 0, 'prod_1746098396.jpg', 'coffee', '[1, 2]', '{\"large\": 20, \"small\": 5}'),
-(45, 'Tapioca Pearls', 'Add-ons', 'extra', 20, 'active', 0, 'prod_1748083606.jpg', 'coffee', NULL, '[]');
+(45, 'Tapioca Pearls', 'Add-ons', 'extra', 20, 'active', 0, 'prod_1748083606.jpg', 'coffee', NULL, '[]'),
+(46, 'Chibi Religious Item', 'Chibi Religious Item', 'adsad', 100, 'active', 23, 'prod_1748193066.jpg', 'online', NULL, NULL),
+(47, 'Baby Jesus', 'Statues', 'asda', 150, 'active', 20, 'prod_1748193098.jpg', 'online', NULL, NULL),
+(48, 'Rosary', 'Rosary', 'wdas', 200, 'active', 23, 'prod_1748193118.jpg', 'online', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -256,9 +261,9 @@ CREATE TABLE `wishlist` (
 --
 
 INSERT INTO `wishlist` (`id`, `user_id`, `product_id`, `type`) VALUES
-(52, 42, 39, 'coffee'),
-(54, 42, 38, 'coffee'),
-(56, 42, 30, 'coffee');
+(58, 42, 46, 'online'),
+(59, 42, 47, 'online'),
+(60, 42, 40, 'coffee');
 
 --
 -- Indexes for dumped tables
@@ -329,7 +334,7 @@ ALTER TABLE `wishlist`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=71;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
 
 --
 -- AUTO_INCREMENT for table `deliveries`
@@ -359,13 +364,13 @@ ALTER TABLE `orders`
 -- AUTO_INCREMENT for table `order_products`
 --
 ALTER TABLE `order_products`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -377,7 +382,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `wishlist`
 --
 ALTER TABLE `wishlist`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
 
 --
 -- Constraints for dumped tables

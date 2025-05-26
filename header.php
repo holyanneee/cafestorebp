@@ -31,7 +31,12 @@ $current_store = $_SESSION['store'];
 $type = ($current_store === 'kape_milagrosa') ? 'coffee' : 'online';
 
 $user_id = $_SESSION['user_id'] ?? null; // Use null coalescing operator for safety
-
+if (!isset($user_id) && (isset($_GET['cart_product_id']) || isset($_GET['fav_product_id']))) {
+   unset($_GET['cart_product_id']);
+   unset($_GET['fav_product_id']);
+   header('location:login.php');
+   exit;
+}
 if (isset($user_id)) {
    $count_cart_items = $conn->prepare("SELECT * FROM `cart` WHERE user_id = ? AND type = ?");
    $count_cart_items->execute([$user_id, $type]);
@@ -45,11 +50,6 @@ if (isset($user_id)) {
    $fetch_profile = $select_profile->fetch(PDO::FETCH_ASSOC);
 
    if (isset($_GET['fav_product_id'])) {
-      if (!isset($user_id)) {
-         unset($_GET['fav_product_id']);
-         header('location:login.php');
-         exit;
-      }
       $prouct_id = $_GET['fav_product_id'];
       $prouct_id = filter_var($prouct_id, FILTER_SANITIZE_SPECIAL_CHARS);
 
@@ -73,11 +73,7 @@ if (isset($user_id)) {
    }
 
    if (isset($_GET['cart_product_id'])) {
-      if (!isset($user_id)) {
-         unset($_GET['cart_product_id']);
-         header('location:login.php');
-         exit;
-      }
+      
       $product_id = $_GET['cart_product_id'];
 
       $check_cart_numbers = $conn->prepare("SELECT * FROM `cart` WHERE product_id = ? AND user_id = ?");
@@ -196,6 +192,7 @@ if (!empty($category)) {
 
       <div class="icons">
          <?php if ($user_id) { ?>
+            <div id="menu-btn" class="fas fa-bars"></div>
             <div id="user-btn" class="fas fa-user"></div>
             <a href="wishlist.php"><i class="fas fa-heart"></i><span>(<?= $count_wishlist_items->rowCount(); ?>)</span></a>
             <a href="cart.php"><i class="fas fa-shopping-cart"></i><span>(<?= $count_cart_items->rowCount(); ?>)</span></a>
