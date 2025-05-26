@@ -3,11 +3,6 @@
 
 session_start();
 
-$user_id = $_SESSION['user_id'];
-
-if (!isset($user_id)) {
-   header('location:login.php');
-}
 ?>
 
 <!DOCTYPE html>
@@ -17,7 +12,7 @@ if (!isset($user_id)) {
    <meta charset="UTF-8">
    <meta http-equiv="X-UA-Compatible" content="IE=edge">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>home page</title>
+   <title>Home</title>
 
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
    <link rel="stylesheet" href="css/style.css">
@@ -173,70 +168,6 @@ if (!isset($user_id)) {
 <body>
 
    <?php include 'header.php'; ?>
-   <?php
-   $category = '';
-   
-   if (isset($_GET['fav_product_id'])) {
-      $prouct_id = $_GET['fav_product_id'];
-      $prouct_id = filter_var($prouct_id, FILTER_SANITIZE_SPECIAL_CHARS);
-
-      $check_favourite_numbers = $conn->prepare("SELECT * FROM `wishlist` WHERE product_id = ? AND user_id = ? AND type = ?");
-      $check_favourite_numbers->execute([$prouct_id, $user_id, $type]);
-      if ($check_favourite_numbers->rowCount() > 0) {
-         $message[] = 'already added to wishlist!';
-      } else {
-         $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
-         $select_product->execute([$prouct_id]);
-         if ($select_product->rowCount() > 0) {
-            $fetch_product = $select_product->fetch(PDO::FETCH_ASSOC);
-            $insert_wishlist = $conn->prepare("INSERT INTO `wishlist`(user_id, product_id ,type) VALUES(?,?,?)");
-            $insert_wishlist->execute([$user_id, $prouct_id, $type]);
-            $message[] = 'added to wishlist!';
-         } else {
-            $message[] = 'product not found!';
-         }
-      }
-
-   }
-
-   if (isset($_GET['cart_product_id'])) {
-      $product_id = $_GET['cart_product_id'];
-
-      $check_cart_numbers = $conn->prepare("SELECT * FROM `cart` WHERE product_id = ? AND user_id = ?");
-      $check_cart_numbers->execute([$product_id, $user_id]);
-
-      if ($check_cart_numbers->rowCount() > 0) {
-         $message[] = 'already added to cart!';
-      } else {
-
-         $check_wishlist_numbers = $conn->prepare("SELECT * FROM `wishlist` WHERE product_id = ? AND user_id = ? AND type = ?");
-         $check_wishlist_numbers->execute([$product_id, $user_id, $type]);
-
-         if ($check_wishlist_numbers->rowCount() > 0) {
-            $delete_wishlist = $conn->prepare("DELETE FROM `wishlist` WHERE product_id = ? AND user_id = ? AND type = ?");
-            $delete_wishlist->execute([$product_id, $user_id, $type]);
-         }
-
-         $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, product_id) VALUES(?,?)");
-         $insert_cart->execute([$user_id, $product_id]);
-         $message[] = 'added to cart!';
-      }
-   }
-
-   if (isset($_GET['category'])) {
-      $category = $_GET['category'];
-   }
-
-   $select_products = $conn->prepare("SELECT * FROM `products` WHERE `status` = 'active' AND `type` = ? AND `category` != 'Add-ons' ORDER BY id DESC LIMIT 6");
-   $select_products->execute([$type]);
-   $products = $select_products->fetchAll(PDO::FETCH_ASSOC);
-   if (!empty($category)) {
-      $select_products = $conn->prepare("SELECT * FROM `products` WHERE `status` = 'active' AND `type` = ? AND `category` = ? ORDER BY id DESC LIMIT 6");
-      $select_products->execute([$type, $category]);
-      $products = $select_products->fetchAll(PDO::FETCH_ASSOC);
-   }
-
-   ?>
    <div class="home-bg">
       <section class="home">
          <?php if ($current_store === 'kape_milagrosa') { ?>
@@ -264,41 +195,42 @@ if (!isset($user_id)) {
       <h1 class="title">Shop by Category</h1>
       <?php if ($current_store === 'kape_milagrosa') { ?>
          <div class="category-buttons">
-            <a href="home.php?category=Frappe"
+            <a href="index.php?category=Frappe"
                class="category-btn <?= ($category == 'Frappe') ? 'active' : '' ?>">Frappe</a>
-            <a href="home.php?category=Fruit Soda"
+            <a href="index.php?category=Fruit Soda"
                class="category-btn <?= ($category == 'Fruit Soda') ? 'active' : '' ?>">Fruit Soda</a>
-            <a href="home.php?category=Frappe Extreme"
+            <a href="index.php?category=Frappe Extreme"
                class="category-btn <?= ($category == 'Frappe Extreme') ? 'active' : '' ?>">Frappe Extreme</a>
-            <a href="home.php?category=Milk Tea" class="category-btn <?= ($category == 'Milk Tea') ? 'active' : '' ?>">Milk
+            <a href="index.php?category=Milk Tea"
+               class="category-btn <?= ($category == 'Milk Tea') ? 'active' : '' ?>">Milk
                Tea</a>
-            <a href="home.php?category=Fruit Tea"
+            <a href="index.php?category=Fruit Tea"
                class="category-btn <?= ($category == 'Fruit Tea') ? 'active' : '' ?>">Fruit Tea</a>
-            <a href="home.php?category=Fruit Milk"
+            <a href="index.php?category=Fruit Milk"
                class="category-btn <?= ($category == 'Fruit Milk') ? 'active' : '' ?>">Fruit Milk</a>
-            <a href="home.php?category=Espresso"
+            <a href="index.php?category=Espresso"
                class="category-btn <?= ($category == 'Espresso') ? 'active' : '' ?>">Espresso</a>
-            <a href="home.php?category=Hot Non-Coffee"
+            <a href="index.php?category=Hot Non-Coffee"
                class="category-btn <?= ($category == 'Hot Non-Coffee') ? 'active' : '' ?>">Hot Non-Coffee</a>
-            <a href="home.php?category=Iced Non-Coffee"
+            <a href="index.php?category=Iced Non-Coffee"
                class="category-btn <?= ($category == 'Iced Non-Coffee') ? 'active' : '' ?>">Iced Non-Coffee</a>
-            <a href="home.php?category=Meal" class="category-btn <?= ($category == 'Meal') ? 'active' : '' ?>">Meal</a>
-            <a href="home.php?category=Snacks"
+            <a href="index.php?category=Meal" class="category-btn <?= ($category == 'Meal') ? 'active' : '' ?>">Meal</a>
+            <a href="index.php?category=Snacks"
                class="category-btn <?= ($category == 'Snacks') ? 'active' : '' ?>">Snacks</a>
-            <a href="home.php" class="category-btn">All</a>
+            <a href="index.php" class="category-btn">All</a>
          </div>
       <?php } elseif ($current_store === 'anak_ng_birhen') { ?>
          <div class="category-buttons">
-            <a href="home.php?category=Chibi Religious Items" class="category-btn">Chibi Religious Items</a>
-            <a href="home.php?category=Angels" class="category-btn">Angels</a>
-            <a href="home.php?category=Cross" class="category-btn">Cross</a>
-            <a href="home.php?category=Prayer Pocket" class="category-btn">Prayer Pocket</a>
-            <a href="home.php?category=Rosary" class="category-btn">Rosary</a>
-            <a href="home.php?category=Ref Magnet" class="category-btn">Ref Magnet</a>
-            <a href="home.php?category=Keychain" class="category-btn">Keychain</a>
-            <a href="home.php?category=Scapular" class="category-btn">Scapular</a>
-            <a href="home.php?category=Statues" class="category-btn">Statues</a>
-            <a href="home.php" class="category-btn">All</a>
+            <a href="index.php?category=Chibi Religious Items" class="category-btn">Chibi Religious Items</a>
+            <a href="index.php?category=Angels" class="category-btn">Angels</a>
+            <a href="index.php?category=Cross" class="category-btn">Cross</a>
+            <a href="index.php?category=Prayer Pocket" class="category-btn">Prayer Pocket</a>
+            <a href="index.php?category=Rosary" class="category-btn">Rosary</a>
+            <a href="index.php?category=Ref Magnet" class="category-btn">Ref Magnet</a>
+            <a href="index.php?category=Keychain" class="category-btn">Keychain</a>
+            <a href="index.php?category=Scapular" class="category-btn">Scapular</a>
+            <a href="index.php?category=Statues" class="category-btn">Statues</a>
+            <a href="index.php" class="category-btn">All</a>
          </div>
       <?php } ?>
    </section>
@@ -321,13 +253,13 @@ if (!isset($user_id)) {
                         </p>
                      </div>
                      <div>
-                        <a href="home.php?fav_product_id=<?= $product['id']; ?>" class="btn-favourite">
+                        <a href="index.php?fav_product_id=<?= $product['id']; ?>" class="btn-favourite">
                            <i class="fas fa-heart"></i>
                         </a>
                      </div>
                   </div>
                   <div class="card-footer">
-                     <a href="home.php?cart_product_id=<?= $product['id']; ?>" class="btn-cart">
+                     <a href="index.php?cart_product_id=<?= $product['id']; ?>" class="btn-cart">
                         <i class="fas fa-shopping-cart"></i> Add to Cart
                      </a>
                   </div>

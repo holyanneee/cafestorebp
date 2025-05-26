@@ -24,7 +24,7 @@ if(isset($_POST['submit'])){
       } elseif($row['role'] == 'user'){
          $_SESSION['user_id'] = $row['id'];
          $_SESSION['user_name'] = $row['name'];
-         header('location:home.php');
+         header('location:index.php');
          exit;
       }elseif($row['role'] == 'cashier'){
          $_SESSION['cashier_id'] = $row['id'];
@@ -85,7 +85,7 @@ if(isset($message)){
       <input type="email" name="email" class="box" placeholder="Enter your email" required>
       <input type="password" name="pass" class="box" placeholder="Enter your password" required>
       <input type="submit" value="Login Now" class="btn" name="submit">
-      <p>Don't have an account? <a href="register.php">Register now</a></p>
+      <p>Don't have an account? <a href="register.php">Sign up</a></p>
    </form>
 </section>
 
