@@ -81,6 +81,9 @@ if (isset($user_id)) {
 
       if ($check_cart_numbers->rowCount() > 0) {
          // update quantity
+         $update_quantity = $conn->prepare("UPDATE `cart` SET quantity = quantity + 1 WHERE product_id = ? AND user_id = ?");
+         $update_quantity->execute([$product_id, $user_id]);
+         $message[] = 'quantity updated in cart!';
       } else {
          $check_wishlist_numbers = $conn->prepare("SELECT * FROM `wishlist` WHERE product_id = ? AND user_id = ? AND type = ?");
          $check_wishlist_numbers->execute([$product_id, $user_id, $type]);

@@ -208,7 +208,7 @@ session_start();
 
             <?php
             $total = 0;
-            $select_cart = $conn->prepare("SELECT cart.*, products.name, products.price, products.image FROM `cart` 
+            $select_cart = $conn->prepare("SELECT cart.*, products.name, products.price, products.image, products.cup_sizes as product_cup_sizes FROM `cart` 
                                  JOIN `products` ON cart.product_id = products.id 
                                  WHERE cart.user_id = ? AND cart.type = ? ORDER BY cart.id DESC");
             $select_cart->execute([$user_id, $type]);
@@ -228,16 +228,24 @@ session_start();
 
                   </div>
                   <div>
-                     <p class="mb-0 h4">You have
+                      <p class="mb-0 h4">You have
                         <?= $count_cart_items ?> items in your cart
-                     </p>
+                      </p>
+                    </div>
                   </div>
-               </div>
-               <?php if ($count_cart_items > 0): ?>
-                  <?php foreach ($cart_items as $item): ?>
-                     <?php
-                     $cup_size = isset($item['cup_size']) ? (json_decode($item['cup_size'], true)['size']) : 'Regular';
-                     $cup_size_price = isset($item['cup_size']) ? (json_decode($item['cup_size'], true)['price']) : 0;
+                  <?php if ($count_cart_items > 0): ?>
+                    <?php foreach ($cart_items as $item): ?>
+                      <?php
+                     $product_cup_sizes = isset($item['product_cup_sizes']) ? json_decode($item['product_cup_sizes'], true) : [];
+                     $cup_size = isset($item['cup_size']) ? json_decode($item['cup_size'], true)['size'] : 'Small';
+                     if (isset($product_cup_sizes['regular'])) {
+                        $cup_size = 'Regular';
+                        $cup_size_price = $product_cup_sizes['regular'];
+                     }
+                     
+                     $cup_size_price = isset($product_cup_sizes[strtolower((string)$cup_size)]) ? $product_cup_sizes[strtolower((string)$cup_size)] : 0;
+                     
+
                      $ingredient_choices = isset($item['ingredients']) ? (json_decode($item['ingredients'], true)) : [];
                      $add_ons = isset($item['add_ons']) ? (json_decode($item['add_ons'], true)) : [];
                      $quantity = $item['quantity'] ?? 1;

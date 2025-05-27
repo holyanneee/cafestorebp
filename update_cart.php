@@ -3,6 +3,7 @@
 session_start();
 
 header('Content-Type: application/json');
+ob_start(); // Start output buffering to capture unexpected output
 
 // Development only
 ini_set('display_errors', 1);
@@ -74,8 +75,10 @@ try {
             $address = $_POST['address'];
 
             // Get user's cart
-            $stmt = $conn->prepare("SELECT * FROM cart WHERE user_id = ?");
-            $stmt->execute([$user_id]);
+            $stmt = $conn->prepare("SELECT cart.*, products.name, products.price, products.image FROM `cart` 
+                                 JOIN `products` ON cart.product_id = products.id 
+                                 WHERE cart.user_id = ? AND cart.type = ?");
+            $stmt->execute([$user_id, $type]);
             $cartItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             if (count($cartItems) === 0) {
@@ -93,16 +96,28 @@ try {
         (order_id, product_id, quantity, price, subtotal, ingredients, cup_sizes, add_ons) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
 
+
+
             foreach ($cartItems as $item) {
+                $cup_size = is_string($item['cup_size']) ? json_decode($item['cup_size'], true) : $item['cup_size'];
+                $ingredients = is_string($item['ingredients']) ? json_decode($item['ingredients'], true) : $item['ingredients'];
+                $add_ons = is_string($item['add_ons']) ? json_decode($item['add_ons'], true) : $item['add_ons'];
+
+                $cup_size = json_encode($cup_size, JSON_UNESCAPED_UNICODE);
+                $ingredients = json_encode($ingredients, JSON_UNESCAPED_UNICODE);
+                $add_ons = json_encode($add_ons, JSON_UNESCAPED_UNICODE);
+
+                $cup_size_price = $cup_size['price'] ?? 0;
+
                 $stmt->execute([
                     $orderId,
                     $item['product_id'],
                     $item['quantity'],
                     $item['price'],
-                    $item['price'] * $item['quantity'],
-                    json_encode($item['ingredients']),
-                    json_encode($item['cup_size']),
-                    json_encode($item['add_ons'])
+                    ($item['price'] + $cup_size_price) * $item['quantity'],
+                    $ingredients,
+                    $cup_size,
+                    $add_ons
                 ]);
             }
 
@@ -115,7 +130,9 @@ try {
 
     }
 
-    echo json_encode(['success' => false, 'message' => 'Invalid request']);
 } catch (Throwable $e) {
+    ob_clean(); // Clear any unexpected output
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+} finally {
+    ob_end_flush(); // End output buffering
 }
