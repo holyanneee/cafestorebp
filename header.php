@@ -80,7 +80,7 @@ if (isset($user_id)) {
       $check_cart_numbers->execute([$product_id, $user_id]);
 
       if ($check_cart_numbers->rowCount() > 0) {
-         $message[] = 'already added to cart!';
+         // update quantity
       } else {
          $check_wishlist_numbers = $conn->prepare("SELECT * FROM `wishlist` WHERE product_id = ? AND user_id = ? AND type = ?");
          $check_wishlist_numbers->execute([$product_id, $user_id, $type]);
@@ -90,7 +90,7 @@ if (isset($user_id)) {
             $delete_wishlist->execute([$product_id, $user_id, $type]);
          }
 
-         $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, product_id) VALUES(?,?)");
+         $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, product_id, quantity) VALUES(?, ?, 1)");
          $insert_cart->execute([$user_id, $product_id]);
          $message[] = 'added to cart!';
       }

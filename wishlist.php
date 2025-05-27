@@ -4,35 +4,6 @@
 
 session_start();
 
-if (isset($_GET['wishlist_id'])) {
-   $wishlist_id = $_GET['wishlist_id'];
-
-   // fetch wishlist item details
-   $select_wishlist = $conn->prepare("SELECT * FROM `wishlist` WHERE id = ?");
-   $select_wishlist->execute([$wishlist_id]);
-   $wishlist_item = $select_wishlist->fetch(PDO::FETCH_ASSOC);
-
-   // check if item exists in cart
-   $check_cart = $conn->prepare("SELECT * FROM `cart` WHERE user_id = ? AND product_id = ?");
-   $check_cart->execute([$wishlist_item['user_id'], $wishlist_item['product_id']]);
-
-   // if true then update quantity
-   if ($check_cart->rowCount() > 0) {
-      $update_cart = $conn->prepare("UPDATE `cart` SET quantity = quantity + 1 WHERE user_id = ? AND product_id = ?");
-      $update_cart->execute([$wishlist_item['user_id'], $wishlist_item['product_id']]);
-   } else {
-      // if not then insert into cart
-      $insert_cart = $conn->prepare("INSERT INTO `cart` (user_id, product_id, quantity) VALUES (?, ?, 1)");
-      $insert_cart->execute([$wishlist_item['user_id'], $wishlist_item['product_id']]);
-   }
-
-   // delete from wishlist
-   $delete_wishlist = $conn->prepare("DELETE FROM `wishlist` WHERE id = ?");
-   $delete_wishlist->execute([$wishlist_id]);
-
-   $message[] = 'Item added to cart and removed from wishlist!';
-}
-
 ?>
 
 <!DOCTYPE html>
@@ -50,130 +21,37 @@ if (isset($_GET['wishlist_id'])) {
    <!-- custom css file link  -->
    <link rel="stylesheet" href="css/style.css">
 
+   <!-- Bootstrap CSS -->
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
    <style>
-      .container {
-         min-height: 100vh;
-         padding: 2rem;
-         display: flex;
-         flex-direction: column;
-         align-items: center;
-      }
-
-      .title {
-         font-size: 3rem;
-         color: darkgreen;
-         margin-top: 5rem;
-         margin-bottom: 1rem;
-         text-align: center;
-
-      }
-
-      .row {
-         display: flex;
-         flex-wrap: wrap;
-         margin-right: -15px;
-         margin-left: -15px;
-      }
-
-      .col-md-8,
-      .col-md-4 {
-         position: relative;
-         width: 100%;
-         padding-right: 15px;
-         padding-left: 15px;
-      }
-
-      .col-md-8 {
-         flex: 0 0 66.666667%;
-         max-width: 66.666667%;
-      }
-
-      .col-md-4 {
-         flex: 0 0 33.333333%;
-         max-width: 33.333333%;
-      }
-
-      .empty {
-         text-align: center;
-         font-size: 1.5rem;
-         color: #888;
-         margin-top: 2rem;
-      }
-
-      .flex {
-         display: flex;
-      }
-
-      .justify-content-between {
-         justify-content: space-between;
-      }
-
-      .align-items-center {
-         align-items: center;
-      }
-
-      .w-full {
-         width: 100%;
-      }
-
-      .card {
-         border: 1px solid #ddd;
-         border-radius: 5px;
-         margin-bottom: 20px;
-         background-color: #fff;
-      }
-
-      .card-body {
-         padding: 20px;
-      }
-
-      .card-footer {
-         padding: 10px;
-         text-align: center;
-         display: flex;
-         flex-direction: column;
-      }
-
-      .card-title {
-         font-size: 1.5rem;
-         margin-bottom: 0.5rem;
-      }
-
-      .card-text {
-         font-size: 1.25rem;
-         margin-bottom: 1rem;
-      }
-
-      .img-fluid {
-         width: 100px;
-         height: 100px;
-         object-fit: cover;
-         padding: 10px;
-      }
-
-      .card-summary {
-         width: 300px;
-      }
-
-      .sumary-title {
-         font-size: 2rem;
-         text-align: center;
-         margin-bottom: 1rem;
-         color: darkgreen;
-      }
-
-      .add-cart-btn {
-         display: inline-block;
-         padding: 10px 20px;
-         background-color: #28a745;
-         color: #fff;
+      /* remove a tag text design */
+      a {
          text-decoration: none;
-         border-radius: 5px;
-         transition: background-color 0.3s ease;
+         color: inherit;
       }
 
-      .add-cart-btn:hover {
-         background-color: #218838;
+      span.mx-2.text-center {
+         font-weight: 600;
+         font-size: 1.2rem;
+         color: #2c3e50;
+      }
+
+      .customize-btn,
+      .remove-btn {
+         padding: 5px 10px;
+         border-radius: 5px;
+         transition: all 0.3s ease;
+      }
+
+      .remove-btn:hover {
+         background-color: #e74c3c;
+         color: white !important;
+      }
+
+      .customize-btn:hover {
+         background-color: #2ecc71;
+         color: white;
       }
    </style>
 </head>
@@ -181,69 +59,100 @@ if (isset($_GET['wishlist_id'])) {
 <body>
 
    <?php include 'header.php'; ?>
-   <?php
-   $wishlist_items = [];
 
-   $grand_total = 0;
+   <section class="wishlist-container">
+      <div class="container">
+         <div class="row mt-5">
 
-   // Fetch wishlist items from the database
-   $select_wishlist = $conn->prepare("SELECT wishlist.*, products.name, products.price, products.details, products.image FROM `wishlist` 
-                                       JOIN `products` ON wishlist.product_id = products.id 
-                                       WHERE wishlist.user_id = ? AND wishlist.type = ? ORDER BY wishlist.id DESC");
-   $select_wishlist->execute([$user_id, $type]);
-   $wishlist_items = $select_wishlist->fetchAll(PDO::FETCH_ASSOC);
-   ?>
-   <section class="container">
+            <?php
+            $total = 0;
+            // Fetch wishlist items from the database
+            $select_wishlist = $conn->prepare("SELECT wishlist.*, products.name, products.price, products.details, products.image FROM `wishlist` 
+                  JOIN `products` ON wishlist.product_id = products.id 
+                  WHERE wishlist.user_id = ? AND wishlist.type = ? ORDER BY wishlist.id DESC");
+            $select_wishlist->execute([$user_id, $type]);
+            $wishlist_items = $select_wishlist->fetchAll(PDO::FETCH_ASSOC);
+            $count_cart_items = $select_wishlist->rowCount();
+            ?>
+            <div class="col-lg-7">
+               <h5 class="mb-3 h3"><a href="shop.php" class="text-body"><i
+                        class="fas fa-long-arrow-alt-left me-2"></i>Continue
+                     shopping</a></h5>
+               <hr>
 
-      <h1 class="title">
-         wishlist items
-      </h1>
+               <div class="d-flex justify-content-between align-items-center mb-4">
+                  <div>
+                     <p class="mb-1 h4">Wishlist</p>
 
-      <div class="row">
-         <div class="col-md-8">
-            <?php if (empty($wishlist_items)) { ?>
-               <p class="text-center empty">Your wishlist is empty.</p>
-            <?php } else { ?>
-               <?php foreach ($wishlist_items as $key => $item) { ?>
-                  <div class="card flex">
-                     <img src="uploaded_img/<?= $item['image']; ?>" class="img-fluid" alt="<?= $item['name']; ?>">
-                     <div class="card-body w-full flex justify-content-between align-items-center">
-                        <div>
-                           <h5 class="card-title"><?= $item['name']; ?></h5>
-                           <p class="card-text">₱ <?= number_format($item['price'], 2); ?></p>
-                           <p class="card-text"><?= $item['details'] ?></p>
+                  </div>
+                  <div>
+                     <p class="mb-0 h4">You have
+                        <?= $count_cart_items ?> items in your wishlist
+                     </p>
+                  </div>
+               </div>
+               <?php if ($count_cart_items > 0): ?>
+                  <?php foreach ($wishlist_items as $item): ?>
+                     <div class="card mb-3">
+                        <div class="card-body">
+                           <div class="d-flex justify-content-between">
+                              <div class="d-flex flex-row align-items-center">
+                                 <div>
+                                    <img src="uploaded_img/<?= $item['image'] ?>" class="img-fluid rounded-3"
+                                       alt="Shopping item" style="width: 65px; height: 100px;">
+                                 </div>
+                                 <div class="ms-3">
+                                    <h4><?= $item['name'] ?></h4>
+                                    <h4>₱<?= $item['price'] ?></h4>
+                                 </div>
+                              </div>
+                              <div class="d-flex flex-row align-items-center">
 
-                        </div>
-                        <div>
-                           <a href="wishlist.php?wishlist_id=<?= $item['id']; ?>" class="add-cart-btn">
-                              Add to Cart
-                           </a>
+                                 <div class="d-flex justify-content-between align-items-center">
+                                    <a href="#!" class="text-muted remove-btn" data-id="<?= $item['id'] ?>">Remove</a>
+                                    <span class="mx-2 text-center">|</span>
+                                    <a href="#!" class="cart-btn" data-id="<?= $item['id'] ?>">
+                                       Add to Cart
+                                    </a>
+                                 </div>
+                              </div>
+                           </div>
                         </div>
                      </div>
+                  <?php endforeach; ?>
+               <?php else: ?>
+                  <div class="card mb-3">
+                     <div class="card-body">
+                        <h3 class="text-center">Your wishlist is empty</h3>
+                     </div>
                   </div>
-               <?php } ?>
-            <?php } ?>
-         </div>
-         <div class="col-md-4">
-            <div class="card card-summary">
-               <div class="card-footer">
-                  <a href="cart.php?is_going_to_checkout=1"
-                     class="btn btn-primary <?= ($grand_total > 0) ? '' : 'disabled'; ?>">
-                     Checkout All
-                  </a>
-                  <a href="cart.php?delete_all"
-                     class="btn btn-outline-danger <?= ($grand_total > 0) ? '' : 'disabled'; ?>"
-                     onclick="return confirm('Delete all items?');">
-                     Delete All
-                  </a>
+               <?php endif; ?>
 
-               </div>
             </div>
+            <div class="col-lg-5">
+               <div class="card bg-success text-white rounded-3 mt-5">
+                  <div class="card-body">
+                     <button type="button" 
+                        class="btn btn-danger btn-block btn-lg" id="">
+                        <span class="text-white">
+                           Remoive All
+                           <i class="fas fa-trash ms-2 text-white"></i>
+                        </span>
+                     </button>
+                     <button type="button"  class="btn btn-info btn-block btn-lg" id="add-all-btn">
+                        <span class="text-white">
+                           Add to all items to cart
+                           <i class="fas fa-cart-shopping ms-2 text-white"></i>
+                        </span>
+                     </button>
+
+                  </div>
+               </div>
+
+            </div>
+
          </div>
       </div>
-
-
-
 
    </section>
 
@@ -257,6 +166,125 @@ if (isset($_GET['wishlist_id'])) {
    <?php include 'footer.php'; ?>
 
    <script src="js/script.js"></script>
+   <script>
+      document.addEventListener('DOMContentLoaded', function () {
+         document.querySelectorAll('.remove-btn').forEach(element => {
+            element.addEventListener('click', function () {
+               const id = this.dataset.id;
+               removeFromWishlist(id);
+            });
+         });
+
+         document.querySelectorAll('.cart-btn').forEach(element => {
+            element.addEventListener('click', function () {
+               const id = this.dataset.id;
+               addToCart(id);
+            });
+         });
+
+         document.getElementById('remove-all-btn')?.addEventListener('click', function () {
+            removeAllItemFromWishlist();
+         });
+
+         document.getElementById('add-all-btn')?.addEventListener('click', function () {
+            addAllItemFromWishlist();
+         });
+      });
+
+      function removeFromWishlist(id) {
+         const formData = new FormData();
+         formData.append('wishlist_id', id);
+         formData.append('action', 'delete');
+
+         fetch('update_wishlist.php', {
+            method: 'POST',
+            body: formData
+         })
+            .then(res => res.json())
+            .then(data => {
+               if (data.success) {
+                  alert('Item removed successfully.');
+                  location.reload();
+               } else {
+                  alert('Failed to remove item: ' + data.message);
+               }
+            })
+            .catch(err => {
+               console.error('Error removing item:', err);
+               alert('Something went wrong.');
+            });
+      }
+
+      function removeAllItemFromWishlist() {
+         const formData = new FormData();
+         formData.append('action', 'delete_all');
+
+         fetch('update_wishlist.php', {
+            method: 'POST',
+            body: formData
+         })
+            .then(res => res.json())
+            .then(data => {
+               if (data.success) {
+                  alert('All wishlist items removed.');
+                  location.reload();
+               } else {
+                  alert('Failed to remove all: ' + data.message);
+               }
+            })
+            .catch(err => {
+               console.error('Error:', err);
+               alert('Something went wrong.');
+            });
+      }
+
+      function addToCart(id) {
+         const formData = new FormData();
+         formData.append('wishlist_id', id);
+         formData.append('action', 'store');
+
+         fetch('update_wishlist.php', {
+            method: 'POST',
+            body: formData
+         })
+            .then(res => res.json())
+            .then(data => {
+               if (data.success) {
+                  alert('Item added to cart.');
+                  location.reload();
+               } else {
+                  alert('Failed to add to cart: ' + data.message);
+               }
+            })
+            .catch(err => {
+               console.error('Error:', err);
+               alert('Something went wrong.');
+            });
+      }
+
+      function addAllItemFromWishlist() {
+         const formData = new FormData();
+         formData.append('action', 'store_all');
+
+         fetch('update_wishlist.php', {
+            method: 'POST',
+            body: formData
+         })
+            .then(res => res.json())
+            .then(data => {
+               if (data.success) {
+                  alert('All wishlist items added to cart.');
+                  location.reload();
+               } else {
+                  alert('Failed to add all to cart: ' + data.message);
+               }
+            })
+            .catch(err => {
+               console.error('Error:', err);
+               alert('Something went wrong.');
+            });
+      }
+   </script>
 
 </body>
 
