@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: May 26, 2025 at 04:50 PM
+-- Generation Time: May 27, 2025 at 07:07 PM
 -- Server version: 8.0.30
 -- PHP Version: 8.2.27
 
@@ -44,9 +44,7 @@ CREATE TABLE `cart` (
 --
 
 INSERT INTO `cart` (`id`, `user_id`, `product_id`, `quantity`, `type`, `cup_size`, `add_ons`, `ingredients`, `special_instruction`) VALUES
-(73, 42, 38, 1, 'coffee', NULL, NULL, NULL, NULL),
-(74, 42, 37, 1, 'coffee', NULL, NULL, NULL, NULL),
-(75, 42, 39, 1, 'coffee', NULL, NULL, NULL, NULL);
+(96, 42, 39, 1, 'coffee', '{\"size\": \"Regular\", \"price\": 5}', '[{\"id\": \"45\", \"name\": \"Tapioca Pearls\", \"price\": 20}]', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', '123123123');
 
 -- --------------------------------------------------------
 
@@ -130,12 +128,8 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `user_id`, `name`, `number`, `email`, `method`, `address`, `payment_status`, `cashier`, `receipt`, `barista`, `type`, `placed_on`) VALUES
-(1, 38, 'Walk-in Customer', '', '', 'cash', 'N/A', 'completed', 'code and u', '', 'code and u', 'coffee', '2025-05-24 04:37:18'),
-(2, 38, 'Walk-in Customer', '', '', 'cash', 'N/A', 'completed', 'code and u', '', 'code and u', 'coffee', '2025-05-24 04:38:18'),
-(3, 38, 'Walk-in Customer', '', '', 'cash', 'N/A', 'completed', 'code and u', '', 'code and u', 'coffee', '2025-05-24 07:03:46'),
-(4, 38, 'Walk-in Customer', '', '', 'cash', 'N/A', 'completed', 'code and u', '', 'code and u', 'coffee', '2025-05-24 07:04:39'),
-(5, 38, 'Walk-in Customer', '', '', 'cash', 'N/A', 'completed', 'code and u', '', 'code and u', 'coffee', '2025-05-24 07:23:37'),
-(6, 38, 'Walk-in Customer', '', '', 'cash', 'N/A', 'on Going', 'code and u', '', 'code and u', 'coffee', '2025-05-24 07:25:13');
+(5, 42, 'qwe', '09823124523', 'roy@gmail.com', 'Cash on Delivery', 'qweqwe\r\n', 'on Queue', NULL, NULL, NULL, 'coffee', '2025-05-27 18:24:12'),
+(6, 42, 'kjhgkjhkjhkk', '09123456674', 'ruit@gmail.com', 'Cash on Delivery', 'kiujghjkh', 'on Queue', NULL, NULL, NULL, 'coffee', '2025-05-27 18:31:43');
 
 -- --------------------------------------------------------
 
@@ -162,20 +156,10 @@ CREATE TABLE `order_products` (
 --
 
 INSERT INTO `order_products` (`id`, `order_id`, `product_id`, `quantity`, `price`, `subtotal`, `ingredients`, `cup_sizes`, `add_ons`, `created_at`, `updated_at`) VALUES
-(1, 1, 40, 1, '100.00', '140.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}}', '{\"size\": \"Large\", \"price\": 20}', '[{\"id\": \"45\", \"name\": \"\\n                           Tapioca Pearls\", \"price\": 20}]', '2025-05-24 12:37:18', '2025-05-24 12:37:18'),
-(2, 2, 40, 2, '100.00', '250.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}}', '{\"size\": \"Small\", \"price\": 5}', '[{\"id\": \"45\", \"name\": \"\\n                           Tapioca Pearls\", \"price\": 20}]', '2025-05-24 12:38:18', '2025-05-24 12:38:18'),
-(3, 2, 24, 3, '100.00', '315.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Less\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Less\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Extra\"}}', '{\"size\": \"Regular\", \"price\": 5}', '[]', '2025-05-24 12:38:18', '2025-05-24 12:38:18'),
-(4, 3, 40, 1, '100.00', '125.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Extra\"}}', '{\"size\": \"Small\", \"price\": 5}', '[{\"id\": \"45\", \"name\": \"\\n                           Tapioca Pearls\", \"price\": 20}]', '2025-05-24 15:03:46', '2025-05-24 15:03:46'),
-(5, 4, 24, 1, '100.00', '110.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Extra\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Extra\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Extra\"}}', '{\"size\": \"Large\", \"price\": 10}', '[]', '2025-05-24 15:04:39', '2025-05-24 15:04:39'),
-(6, 4, 37, 1, '100.00', '105.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Extra\"}}', '{\"size\": \"Regular\", \"price\": 5}', '[]', '2025-05-24 15:04:39', '2025-05-24 15:04:39'),
-(7, 4, 30, 1, '89.00', '91.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', '{\"size\": \"Small\", \"price\": 2}', '[]', '2025-05-24 15:04:39', '2025-05-24 15:04:39'),
-(8, 4, 38, 2, '250.00', '510.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', '{\"size\": \"Regular\", \"price\": 5}', '[]', '2025-05-24 15:04:39', '2025-05-24 15:04:39'),
-(9, 5, 40, 3, '100.00', '375.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}}', '{\"size\": \"Small\", \"price\": 5}', '[{\"id\": \"45\", \"name\": \"\\n                           Tapioca Pearls\", \"price\": 20}]', '2025-05-24 15:23:37', '2025-05-24 15:23:37'),
-(10, 5, 39, 3, '300.00', '990.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Extra\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', '{\"size\": \"Large\", \"price\": 10}', '[{\"id\": \"45\", \"name\": \"\\n                           Tapioca Pearls\", \"price\": 20}]', '2025-05-24 15:23:37', '2025-05-24 15:23:37'),
-(11, 6, 24, 1, '100.00', '105.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', '{\"size\": \"Regular\", \"price\": 5}', '[]', '2025-05-24 15:25:13', '2025-05-24 15:25:13'),
-(12, 6, 37, 1, '100.00', '102.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', '{\"size\": \"Small\", \"price\": 2}', '[]', '2025-05-24 15:25:13', '2025-05-24 15:25:13'),
-(13, 6, 40, 1, '100.00', '120.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}}', '{\"size\": \"Large\", \"price\": 20}', '[]', '2025-05-24 15:25:13', '2025-05-24 15:25:13'),
-(14, 6, 30, 1, '89.00', '91.00', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', '{\"size\": \"Small\", \"price\": 2}', '[]', '2025-05-24 15:25:13', '2025-05-24 15:25:13');
+(8, 5, 40, 3, '100.00', '300.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"}}', '{\"size\":\"Small\",\"price\":5}', '[{\"id\":\"45\",\"name\":\"Tapioca Pearls\",\"price\":20}]', '2025-05-27 18:24:12', '2025-05-27 18:26:47'),
+(9, 6, 39, 1, '300.00', '300.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"Regular\"}}', '{\"size\":\"Regular\",\"price\":5}', '[]', '2025-05-27 18:31:43', '2025-05-27 18:31:43'),
+(10, 6, 30, 1, '89.00', '89.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"Less\"}}', '{\"size\":\"Regular\",\"price\":5}', '[]', '2025-05-27 18:31:43', '2025-05-27 18:31:43'),
+(11, 6, 38, 2, '250.00', '500.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Extra\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"Less\"}}', '{\"size\":\"Regular\",\"price\":5}', '[]', '2025-05-27 18:31:43', '2025-05-27 18:31:43');
 
 -- --------------------------------------------------------
 
@@ -257,15 +241,6 @@ CREATE TABLE `wishlist` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `wishlist`
---
-
-INSERT INTO `wishlist` (`id`, `user_id`, `product_id`, `type`) VALUES
-(58, 42, 46, 'online'),
-(59, 42, 47, 'online'),
-(60, 42, 40, 'coffee');
-
---
 -- Indexes for dumped tables
 --
 
@@ -334,7 +309,7 @@ ALTER TABLE `wishlist`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=97;
 
 --
 -- AUTO_INCREMENT for table `deliveries`
@@ -382,7 +357,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `wishlist`
 --
 ALTER TABLE `wishlist`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
 
 --
 -- Constraints for dumped tables

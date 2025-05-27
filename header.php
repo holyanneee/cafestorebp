@@ -73,7 +73,7 @@ if (isset($user_id)) {
    }
 
    if (isset($_GET['cart_product_id'])) {
-      
+
       $product_id = $_GET['cart_product_id'];
 
       $check_cart_numbers = $conn->prepare("SELECT * FROM `cart` WHERE product_id = ? AND user_id = ?");
@@ -92,9 +92,38 @@ if (isset($user_id)) {
             $delete_wishlist = $conn->prepare("DELETE FROM `wishlist` WHERE product_id = ? AND user_id = ? AND type = ?");
             $delete_wishlist->execute([$product_id, $user_id, $type]);
          }
+         //Fetch the ingredients for product
+         $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
+         $select_product->execute([$product_id]);
+         $product = $select_product->fetch(PDO::FETCH_ASSOC);
+         // fetch the ingredients
+         $ingredients = [];
+         foreach (json_decode($product['ingredients']) as $ingredient_id) {
+            $product_ingredients = $conn->prepare("SELECT * FROM `ingredients` WHERE id = ?");
+            $product_ingredients->execute([$ingredient_id]);
+            while ($ingredient = $product_ingredients->fetch(PDO::FETCH_ASSOC)) {
+               $ingredients[$ingredient['id']] = [
+                  'name' => $ingredient['name'],
+                  'level' => 'Regular'
+               ];
+            }
+         }
 
-         $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, product_id, quantity) VALUES(?, ?, 1)");
-         $insert_cart->execute([$user_id, $product_id]);
+         // cup_size(json column)
+         $cup_size = 'Small';
+
+         $cup_sizes = json_decode($product['cup_sizes'], true); // Decode JSON to array
+         if (isset($cup_sizes['regular'])) {
+            $cup_size = 'Regular';
+         } 
+         $cup_price = $cup_sizes[strtolower($cup_size)] ?? 0; // Use null coalescing operator for safety
+         
+
+         $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, product_id, quantity, ingredients, cup_size) VALUES(?, ?, 1, ?, ?)");
+         $insert_cart->execute([$user_id, $product_id, json_encode($ingredients), json_encode([
+            'size' => $cup_size,
+            'price' => $cup_price
+         ])]);
          $message[] = 'added to cart!';
       }
       unset($_GET['cart_product_id']);
@@ -138,12 +167,13 @@ if (!empty($category)) {
       /* Makes it circular */
    }
 
- 
-   .header-action-btn{
+
+   .header-action-btn {
       display: flex;
       align-items: center;
       gap: 10px;
    }
+
    .btn-login {
       display: inline-block;
       padding: 10px 20px;
@@ -155,9 +185,11 @@ if (!empty($category)) {
       font-weight: bold;
       transition: background-color 0.3s ease-in-out;
    }
+
    .btn-login:hover {
       background-color: green;
    }
+
    .btn-register {
       display: inline-block;
       padding: 10px 20px;
@@ -168,6 +200,7 @@ if (!empty($category)) {
       font-weight: bold;
       transition: background-color 0.3s ease-in-out;
    }
+
    .btn-register:hover {
       background-color: #f0f0f0;
       color: darkgreen;
@@ -203,11 +236,11 @@ if (!empty($category)) {
          <?php } else { ?>
             <div class="header-action-btn">
                <a href="register.php" class="btn-register">
-               Sign up
+                  Sign up
                </a>
                <span>|</span>
                <a href="login.php" class="btn-login">
-                   Login
+                  Login
                </a>
             </div>
          <?php } ?>

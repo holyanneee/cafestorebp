@@ -341,7 +341,7 @@ session_start();
                            $cup_size_price = isset($item['cup_size']) ? (json_decode($item['cup_size'], true)['price']) : 0;
                            $ingredient_choices = isset($item['ingredients']) ? (json_decode($item['ingredients'], true)) : [];
                            $add_ons = isset($item['add_ons']) ? (json_decode($item['add_ons'], true)) : [];
-                           $special_instructions = isset($item['special_instructions']) ? htmlspecialchars($item['special_instructions'], ENT_QUOTES) : '';
+                           $special_instructions = isset($item['special_instruction']) ? htmlspecialchars($item['special_instruction'], ENT_QUOTES) : '';
                            $total = $total + ($item['price'] + $cup_size_price) * $item['quantity'];
                            ?>
                            <div class="d-flex align-items-center justify-content-between mb-2">
