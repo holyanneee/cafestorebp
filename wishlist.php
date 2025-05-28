@@ -37,7 +37,7 @@ session_start();
          color: #2c3e50;
       }
 
-      .customize-btn,
+      .cart-btn,
       .remove-btn {
          padding: 5px 10px;
          border-radius: 5px;
@@ -49,18 +49,18 @@ session_start();
          color: white !important;
       }
 
-      .customize-btn:hover {
+      .cart-btn:hover {
          background-color: #2ecc71;
          color: white;
       }
    </style>
 </head>
 
-<body>
+<body style="display: flex; flex-direction: column; min-height: 100vh;">
 
    <?php include 'header.php'; ?>
 
-   <section class="wishlist-container">
+   <main style="flex: 1;">
       <div class="container">
          <div class="row mt-5">
 
@@ -154,7 +154,7 @@ session_start();
          </div>
       </div>
 
-   </section>
+   </main>
 
 
 

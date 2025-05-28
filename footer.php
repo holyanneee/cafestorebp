@@ -1,7 +1,6 @@
-<footer class="footer" style="background: #fff; color: #2d572c; padding: 40px 20px; text-align: center; border-top: 4px solid #2d572c; box-shadow: 0px -4px 10px rgba(0, 0, 0, 0.1);">
-
-   <section class="box-container" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 50px; max-width: 1200px; margin: auto;">
-
+<footer class="footer" style="background: #fff; color: #2d572c; padding: 40px 20px 20px; text-align: center; border-top: 4px solid #2d572c; box-shadow: 0px -4px 10px rgba(0, 0, 0, 0.05);">
+   <section class="box-container" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 50px; max-width: 1200px; margin: auto; padding-bottom: 20px;">
+      <!-- Location -->
       <div class="box" style="max-width: 350px; text-align: left;">
          <h3 style="color: #2d572c; font-size: 20px; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-map-marker-alt" style="font-size: 22px;"></i> Location
@@ -12,6 +11,7 @@
          </a>
       </div>
 
+      <!-- Contact -->
       <div class="box" style="max-width: 350px; text-align: left;">
          <h3 style="color: #2d572c; font-size: 20px; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-phone-alt" style="font-size: 22px;"></i> Contact
@@ -22,6 +22,7 @@
          </a>
       </div>
 
+      <!-- Follow Us -->
       <div class="box" style="max-width: 350px; text-align: left;">
          <h3 style="color: #2d572c; font-size: 20px; display: flex; align-items: center; gap: 10px;">
             <i class="fab fa-facebook" style="font-size: 22px;"></i> Follow Us
@@ -31,11 +32,9 @@
             <i class="fab fa-facebook-f"></i> Kape Milagrosa
          </a>
       </div>
-
    </section>
 
-   <p class="credit" style="margin-top: 30px; font-size: 14px; border-top: 1px solid #ddd; padding-top: 15px;">
+   <p class="credit" style="margin-top: 10px; font-size: 14px; border-top: 1px solid #ddd; padding-top: 15px;">
       &copy; <?= date('Y'); ?> Kape Milagrosa | All rights reserved.
    </p>
-
 </footer>

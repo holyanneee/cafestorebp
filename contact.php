@@ -49,11 +49,11 @@ if(isset($_POST['send'])){
    <link rel="stylesheet" href="css/style.css">
 
 </head>
-<body>
+<body style="display: flex; flex-direction: column; min-height: 100vh;">
    
 <?php include 'header.php'; ?>
 
-<section class="contact">
+<main style="flex: 1;" class="contact">
 
    <h1 class="title">get in touch</h1>
 
@@ -65,7 +65,7 @@ if(isset($_POST['send'])){
       <input type="submit" value="send message" class="btn" name="send">
    </form>
 
-</section>
+</main>
 
 
 

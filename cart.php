@@ -198,11 +198,11 @@ session_start();
    </style>
 </head>
 
-<body>
+<body style="display: flex; flex-direction: column; min-height: 100vh;">
 
    <?php include 'header.php'; ?>
 
-   <section class="shopping-cart">
+   <main style="flex: 1;">
       <div class="container">
          <div class="row mt-5">
 
@@ -237,13 +237,9 @@ session_start();
                     <?php foreach ($cart_items as $item): ?>
                       <?php
                      $product_cup_sizes = isset($item['product_cup_sizes']) ? json_decode($item['product_cup_sizes'], true) : [];
-                     $cup_size = isset($item['cup_size']) ? json_decode($item['cup_size'], true)['size'] : 'Small';
-                     if (isset($product_cup_sizes['regular'])) {
-                        $cup_size = 'Regular';
-                        $cup_size_price = $product_cup_sizes['regular'];
-                     }
+                     $cup_size = json_decode($item['cup_size'], true)['size'];
                      
-                     $cup_size_price = isset($product_cup_sizes[strtolower((string)$cup_size)]) ? $product_cup_sizes[strtolower((string)$cup_size)] : 0;
+                     $cup_size_price = json_decode($item['cup_size'], true)['price'];
                      
 
                      $ingredient_choices = isset($item['ingredients']) ? (json_decode($item['ingredients'], true)) : [];
@@ -372,7 +368,7 @@ session_start();
 
          </div>
       </div>
-   </section>
+   </main>
    <div id="productModal" class="modal fade" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-lg">
          <div class="modal-content">
@@ -437,7 +433,7 @@ session_start();
             <div class="modal-body">
                <div class="mb-3">
                   <label for="checkoutName" class="form-label">Name</label>
-                  <input type="text" class="form-control" id="checkoutName" name="name" required>
+                  <input type="text" class="form-control" id="checkoutName" name="name" value="<?= $fetch_profile['name']?>" required>
                </div>
                <div class="mb-3">
                   <label for="checkoutNumber" class="form-label">Phone Number</label>
@@ -445,7 +441,7 @@ session_start();
                </div>
                <div class="mb-3">
                   <label for="checkoutEmail" class="form-label">Email</label>
-                  <input type="email" class="form-control" id="checkoutEmail" name="email" required>
+                  <input type="email" class="form-control" id="checkoutEmail" name="email" value="<?= $fetch_profile['email']?>" required>
                </div>
                <div class="mb-3">
                   <label for="checkoutMethod" class="form-label">Payment Method</label>
@@ -748,6 +744,7 @@ session_start();
             size: selectedProduct.cupSize,
             price: selectedProduct.cupSizePrice
          }));
+         formData.append('subtotal', (selectedProduct.basePrice + selectedProduct.cupSizePrice) * selectedProduct.quantity);
          formData.append('ingredients', JSON.stringify(selectedProduct.ingredientChoices));
          formData.append('add_ons', JSON.stringify(selectedProduct.addOns));
          formData.append('special_instructions', selectedProduct.specialInstructions);

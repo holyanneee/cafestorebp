@@ -8,6 +8,7 @@ session_start();
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
    <meta charset="UTF-8">
    <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -22,32 +23,36 @@ session_start();
    <link rel="stylesheet" href="css/style.css">
 
 </head>
-<body>
-   
-<?php include 'header.php'; ?>
 
-<section class="about">
+<body style="display: flex; flex-direction: column; min-height: 100vh;">
 
-   <div class="row">
+   <?php include 'header.php'; ?>
 
-      <div class="box">
-         <img src="images/kape_milag.png" alt="">
-         <h3>why choose us?</h3>
-         <p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Quisquam, a quod, quis alias eius dignissimos pariatur laborum dolorem ad ullam iure, consequatur autem animi illo odit! Atque quia minima voluptatibus.</p>
-         <a href="contact.php" class="btn">contact us</a>
+   <main style="flex: 1;" class="about">
+
+      <div class="row" style="margin-top: 50px">
+
+         <div class="box">
+            <img src="images/kape_milag.jpg" alt="">
+            <h3>why choose us?</h3>
+            <p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Quisquam, a quod, quis alias eius dignissimos
+               pariatur laborum dolorem ad ullam iure, consequatur autem animi illo odit! Atque quia minima
+               voluptatibus.</p>
+            <a href="contact.php" class="btn">contact us</a>
+         </div>
+
+         <div class="box">
+            <img src="images/birhen.jpg" alt="">
+            <h3>what we provide?</h3>
+            <p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Quisquam, a quod, quis alias eius dignissimos
+               pariatur laborum dolorem ad ullam iure, consequatur autem animi illo odit! Atque quia minima
+               voluptatibus.</p>
+            <a href="shop.php" class="btn">our shop</a>
+         </div>
       </div>
 
-      <div class="box">
-         <img src="images/birhen.jpg" alt="">
-         <h3>what we provide?</h3>
-         <p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Quisquam, a quod, quis alias eius dignissimos pariatur laborum dolorem ad ullam iure, consequatur autem animi illo odit! Atque quia minima voluptatibus.</p>
-         <a href="shop.php" class="btn">our shop</a>
-      </div>
-
-   </div>
-
-</section>
-<!--
+   </main>
+   <!--
 <section class="reviews">
 
    <h1 class="title">clients reivews</h1>
@@ -144,9 +149,10 @@ session_start();
 
 
 
-<?php include 'footer.php'; ?>
+   <?php include 'footer.php'; ?>
 
-<script src="js/script.js"></script>
+   <script src="js/script.js"></script>
 
 </body>
+
 </html>

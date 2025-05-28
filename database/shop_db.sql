@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: May 27, 2025 at 07:07 PM
+-- Generation Time: May 28, 2025 at 08:43 AM
 -- Server version: 8.0.30
 -- PHP Version: 8.2.27
 
@@ -34,17 +34,11 @@ CREATE TABLE `cart` (
   `quantity` int NOT NULL DEFAULT '0',
   `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee',
   `cup_size` json DEFAULT NULL,
+  `subtotal` decimal(10,2) NOT NULL DEFAULT '0.00',
   `add_ons` json DEFAULT NULL,
   `ingredients` json DEFAULT NULL,
   `special_instruction` text COLLATE utf8mb4_general_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `cart`
---
-
-INSERT INTO `cart` (`id`, `user_id`, `product_id`, `quantity`, `type`, `cup_size`, `add_ons`, `ingredients`, `special_instruction`) VALUES
-(96, 42, 39, 1, 'coffee', '{\"size\": \"Regular\", \"price\": 5}', '[{\"id\": \"45\", \"name\": \"Tapioca Pearls\", \"price\": 20}]', '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', '123123123');
 
 -- --------------------------------------------------------
 
@@ -120,16 +114,17 @@ CREATE TABLE `orders` (
   `receipt` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `barista` text COLLATE utf8mb4_general_ci,
   `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee',
-  `placed_on` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  `placed_on` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `user_id`, `name`, `number`, `email`, `method`, `address`, `payment_status`, `cashier`, `receipt`, `barista`, `type`, `placed_on`) VALUES
-(5, 42, 'qwe', '09823124523', 'roy@gmail.com', 'Cash on Delivery', 'qweqwe\r\n', 'on Queue', NULL, NULL, NULL, 'coffee', '2025-05-27 18:24:12'),
-(6, 42, 'kjhgkjhkjhkk', '09123456674', 'ruit@gmail.com', 'Cash on Delivery', 'kiujghjkh', 'on Queue', NULL, NULL, NULL, 'coffee', '2025-05-27 18:31:43');
+INSERT INTO `orders` (`id`, `user_id`, `name`, `number`, `email`, `method`, `address`, `payment_status`, `cashier`, `receipt`, `barista`, `type`, `placed_on`, `created_at`, `updated_at`) VALUES
+(11, 42, 'Melinda Downs', '09512323111', 'muwybave@mailinator.com', 'Cash on Delivery', 'qweqwe', 'on Queue', NULL, NULL, NULL, 'coffee', '2025-05-28 08:05:42', '2025-05-28 08:05:42', '2025-05-28 08:05:42');
 
 -- --------------------------------------------------------
 
@@ -156,10 +151,8 @@ CREATE TABLE `order_products` (
 --
 
 INSERT INTO `order_products` (`id`, `order_id`, `product_id`, `quantity`, `price`, `subtotal`, `ingredients`, `cup_sizes`, `add_ons`, `created_at`, `updated_at`) VALUES
-(8, 5, 40, 3, '100.00', '300.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"}}', '{\"size\":\"Small\",\"price\":5}', '[{\"id\":\"45\",\"name\":\"Tapioca Pearls\",\"price\":20}]', '2025-05-27 18:24:12', '2025-05-27 18:26:47'),
-(9, 6, 39, 1, '300.00', '300.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"Regular\"}}', '{\"size\":\"Regular\",\"price\":5}', '[]', '2025-05-27 18:31:43', '2025-05-27 18:31:43'),
-(10, 6, 30, 1, '89.00', '89.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"Less\"}}', '{\"size\":\"Regular\",\"price\":5}', '[]', '2025-05-27 18:31:43', '2025-05-27 18:31:43'),
-(11, 6, 38, 2, '250.00', '500.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Extra\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"Less\"}}', '{\"size\":\"Regular\",\"price\":5}', '[]', '2025-05-27 18:31:43', '2025-05-27 18:31:43');
+(21, 11, 40, 10, '100.00', '1200.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"}}', '{\"size\":\"Large\",\"price\":20}', '[{\"id\":\"45\",\"name\":\"Tapioca Pearls\",\"price\":20}]', '2025-05-28 08:05:42', '2025-05-28 08:05:42'),
+(22, 11, 38, 3, '250.00', '765.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"Extra\"}}', '{\"size\":\"Regular\",\"price\":5}', '[{\"id\":\"45\",\"name\":\"Tapioca Pearls\",\"price\":20}]', '2025-05-28 08:05:42', '2025-05-28 08:05:42');
 
 -- --------------------------------------------------------
 
@@ -309,7 +302,7 @@ ALTER TABLE `wishlist`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=97;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=107;
 
 --
 -- AUTO_INCREMENT for table `deliveries`
@@ -333,7 +326,7 @@ ALTER TABLE `message`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `order_products`
@@ -357,7 +350,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `wishlist`
 --
 ALTER TABLE `wishlist`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
 
 --
 -- Constraints for dumped tables

@@ -119,11 +119,13 @@ if (isset($user_id)) {
          $cup_price = $cup_sizes[strtolower($cup_size)] ?? 0; // Use null coalescing operator for safety
          
 
-         $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, product_id, quantity, ingredients, cup_size) VALUES(?, ?, 1, ?, ?)");
+         $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, product_id, quantity, ingredients, cup_size, subtotal) VALUES(?, ?, 1, ?, ?, ?)");
          $insert_cart->execute([$user_id, $product_id, json_encode($ingredients), json_encode([
             'size' => $cup_size,
             'price' => $cup_price
-         ])]);
+         ]),
+         ($product['price'] + $cup_price) * 1
+      ]);
          $message[] = 'added to cart!';
       }
       unset($_GET['cart_product_id']);

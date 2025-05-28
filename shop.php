@@ -161,92 +161,93 @@ session_start();
 
 </head>
 
-<body>
+<body  style="display: flex; flex-direction: column; min-height: 100vh;">
 
     <?php include 'header.php'; ?>
+    <main style="flex: 1;" >
+        <section class="p-category">
+            <?php if ($current_store === 'kape_milagrosa') { ?>
+                <div class="category-buttons">
+                    <a href="shop.php?category=Frappe"
+                        class="category-btn <?= ($category == 'Frappe') ? 'active' : '' ?>">Frappe</a>
+                    <a href="shop.php?category=Fruit Soda"
+                        class="category-btn <?= ($category == 'Fruit Soda') ? 'active' : '' ?>">Fruit Soda</a>
+                    <a href="shop.php?category=Frappe Extreme"
+                        class="category-btn <?= ($category == 'Frappe Extreme') ? 'active' : '' ?>">Frappe Extreme</a>
+                    <a href="shop.php?category=Milk Tea"
+                        class="category-btn <?= ($category == 'Milk Tea') ? 'active' : '' ?>">Milk
+                        Tea</a>
+                    <a href="shop.php?category=Fruit Tea"
+                        class="category-btn <?= ($category == 'Fruit Tea') ? 'active' : '' ?>">Fruit Tea</a>
+                    <a href="shop.php?category=Fruit Milk"
+                        class="category-btn <?= ($category == 'Fruit Milk') ? 'active' : '' ?>">Fruit Milk</a>
+                    <a href="shop.php?category=Espresso"
+                        class="category-btn <?= ($category == 'Espresso') ? 'active' : '' ?>">Espresso</a>
+                    <a href="shop.php?category=Hot Non-Coffee"
+                        class="category-btn <?= ($category == 'Hot Non-Coffee') ? 'active' : '' ?>">Hot Non-Coffee</a>
+                    <a href="shop.php?category=Iced Non-Coffee"
+                        class="category-btn <?= ($category == 'Iced Non-Coffee') ? 'active' : '' ?>">Iced Non-Coffee</a>
+                    <a href="shop.php?category=Meal" class="category-btn <?= ($category == 'Meal') ? 'active' : '' ?>">Meal</a>
+                    <a href="shop.php?category=Snacks"
+                        class="category-btn <?= ($category == 'Snacks') ? 'active' : '' ?>">Snacks</a>
+                    <a href="shop.php" class="category-btn">All</a>
+                </div>
+            <?php } elseif ($current_store === 'anak_ng_birhen') { ?>
+                <div class="category-buttons">
+                    <a href="shop.php?category=Angels" class="category-btn">Angels</a>
+                    <a href="shop.php?category=Cross" class="category-btn">Cross</a>
+                    <a href="shop.php?category=Prayer Pocket" class="category-btn">Prayer Pocket</a>
+                    <a href="shop.php?category=Rosary" class="category-btn">Rosary</a>
+                    <a href="shop.php?category=Ref Magnet" class="category-btn">Ref Magnet</a>
+                    <a href="shop.php?category=Keychain" class="category-btn">Keychain</a>
+                    <a href="shop.php?category=Scapular" class="category-btn">Scapular</a>
+                    <a href="shop.php?category=Statues" class="category-btn">Statues</a>
+                </div>
+            <?php } ?>
     
-    <section class="p-category">
-        <?php if ($current_store === 'kape_milagrosa') { ?>
-            <div class="category-buttons">
-                <a href="shop.php?category=Frappe"
-                    class="category-btn <?= ($category == 'Frappe') ? 'active' : '' ?>">Frappe</a>
-                <a href="shop.php?category=Fruit Soda"
-                    class="category-btn <?= ($category == 'Fruit Soda') ? 'active' : '' ?>">Fruit Soda</a>
-                <a href="shop.php?category=Frappe Extreme"
-                    class="category-btn <?= ($category == 'Frappe Extreme') ? 'active' : '' ?>">Frappe Extreme</a>
-                <a href="shop.php?category=Milk Tea"
-                    class="category-btn <?= ($category == 'Milk Tea') ? 'active' : '' ?>">Milk
-                    Tea</a>
-                <a href="shop.php?category=Fruit Tea"
-                    class="category-btn <?= ($category == 'Fruit Tea') ? 'active' : '' ?>">Fruit Tea</a>
-                <a href="shop.php?category=Fruit Milk"
-                    class="category-btn <?= ($category == 'Fruit Milk') ? 'active' : '' ?>">Fruit Milk</a>
-                <a href="shop.php?category=Espresso"
-                    class="category-btn <?= ($category == 'Espresso') ? 'active' : '' ?>">Espresso</a>
-                <a href="shop.php?category=Hot Non-Coffee"
-                    class="category-btn <?= ($category == 'Hot Non-Coffee') ? 'active' : '' ?>">Hot Non-Coffee</a>
-                <a href="shop.php?category=Iced Non-Coffee"
-                    class="category-btn <?= ($category == 'Iced Non-Coffee') ? 'active' : '' ?>">Iced Non-Coffee</a>
-                <a href="shop.php?category=Meal" class="category-btn <?= ($category == 'Meal') ? 'active' : '' ?>">Meal</a>
-                <a href="shop.php?category=Snacks"
-                    class="category-btn <?= ($category == 'Snacks') ? 'active' : '' ?>">Snacks</a>
-                <a href="shop.php" class="category-btn">All</a>
-            </div>
-        <?php } elseif ($current_store === 'anak_ng_birhen') { ?>
-            <div class="category-buttons">
-                <a href="shop.php?category=Angels" class="category-btn">Angels</a>
-                <a href="shop.php?category=Cross" class="category-btn">Cross</a>
-                <a href="shop.php?category=Prayer Pocket" class="category-btn">Prayer Pocket</a>
-                <a href="shop.php?category=Rosary" class="category-btn">Rosary</a>
-                <a href="shop.php?category=Ref Magnet" class="category-btn">Ref Magnet</a>
-                <a href="shop.php?category=Keychain" class="category-btn">Keychain</a>
-                <a href="shop.php?category=Scapular" class="category-btn">Scapular</a>
-                <a href="shop.php?category=Statues" class="category-btn">Statues</a>
-            </div>
-        <?php } ?>
-
-
-
-
-    </section>
-
-    <section class="products">
-        <h1 class="title">Latest products</h1>
-        <div class="container">
-            <?php
-            if ($products) {
-                foreach ($products as $product) {
-                    ?>
-                    <div class="card">
-                        <img src="uploaded_img/<?= $product['image']; ?>" alt="<?= $product['name']; ?>">
-                        <div class="card-body">
-                            <div>
-                                <h5 class="card-title"><?= $product['name']; ?></h5>
-                                <p class="card-text">₱<?= number_format($product['price'], 2); ?></p>
-                                <p class="card-text details">
-                                    <?= $product['details']; ?>
-                                </p>
+    
+    
+    
+        </section>
+    
+        <section class="products">
+            <h1 class="title">Latest products</h1>
+            <div class="container">
+                <?php
+                if ($products) {
+                    foreach ($products as $product) {
+                        ?>
+                        <div class="card">
+                            <img src="uploaded_img/<?= $product['image']; ?>" alt="<?= $product['name']; ?>">
+                            <div class="card-body">
+                                <div>
+                                    <h5 class="card-title"><?= $product['name']; ?></h5>
+                                    <p class="card-text">₱<?= number_format($product['price'], 2); ?></p>
+                                    <p class="card-text details">
+                                        <?= $product['details']; ?>
+                                    </p>
+                                </div>
+                                <div>
+                                    <a href="shop.php?fav_product_id=<?= $product['id']; ?>" class="btn-favourite">
+                                        <i class="fas fa-heart"></i>
+                                    </a>
+                                </div>
                             </div>
-                            <div>
-                                <a href="shop.php?fav_product_id=<?= $product['id']; ?>" class="btn-favourite">
-                                    <i class="fas fa-heart"></i>
+                            <div class="card-footer">
+                                <a href="shop.php?cart_product_id=<?= $product['id']; ?>" class="btn-cart">
+                                    <i class="fas fa-shopping-cart"></i> Add to Cart
                                 </a>
                             </div>
                         </div>
-                        <div class="card-footer">
-                            <a href="shop.php?cart_product_id=<?= $product['id']; ?>" class="btn-cart">
-                                <i class="fas fa-shopping-cart"></i> Add to Cart
-                            </a>
-                        </div>
-                    </div>
-                    <?php
+                        <?php
+                    }
+                } else {
+                    echo '<p class="empty">No active products available at the moment!</p>';
                 }
-            } else {
-                echo '<p class="empty">No active products available at the moment!</p>';
-            }
-            ?>
-        </div>
-    </section>
+                ?>
+            </div>
+        </section>
+    </main>
 
 
 

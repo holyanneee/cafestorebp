@@ -36,6 +36,7 @@ try {
             $product_id = filter_var($_POST['product_id'], FILTER_SANITIZE_NUMBER_INT);
             $quantity = filter_var($_POST['quantity'], FILTER_SANITIZE_NUMBER_INT);
             $cup_size = $_POST['cup_size'];
+            $subtotal = filter_var($_POST['subtotal'], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
             $ingredients = $_POST['ingredients'];
             $add_ons = $_POST['add_ons'];
             $special_instructions = filter_var($_POST['special_instructions'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
@@ -50,11 +51,12 @@ try {
             }
 
             $stmt = $conn->prepare("UPDATE cart 
-                SET quantity = ?, cup_size = ?, ingredients = ?, add_ons = ?, special_instruction = ?
+                SET quantity = ?, cup_size = ?, subtotal = ? , ingredients = ?, add_ons = ?, special_instruction = ?
                 WHERE id = ? AND user_id = ?");
             $stmt->execute([
                 $quantity,
                 $cup_size,
+                $subtotal,
                 $ingredients,
                 $add_ons,
                 $special_instructions,
@@ -99,9 +101,9 @@ try {
 
 
             foreach ($cartItems as $item) {
-                $cup_size = is_string($item['cup_size']) ? json_decode($item['cup_size'], true) : $item['cup_size'];
-                $ingredients = is_string($item['ingredients']) ? json_decode($item['ingredients'], true) : $item['ingredients'];
-                $add_ons = is_string($item['add_ons']) ? json_decode($item['add_ons'], true) : $item['add_ons'];
+                $cup_size = json_decode($item['cup_size'], true);
+                $ingredients = json_decode($item['ingredients'], true);
+                $add_ons = json_decode($item['add_ons'], true);
 
                 $cup_size = json_encode($cup_size, JSON_UNESCAPED_UNICODE);
                 $ingredients = json_encode($ingredients, JSON_UNESCAPED_UNICODE);
@@ -114,7 +116,7 @@ try {
                     $item['product_id'],
                     $item['quantity'],
                     $item['price'],
-                    ($item['price'] + $cup_size_price) * $item['quantity'],
+                    $item['subtotal'],
                     $ingredients,
                     $cup_size,
                     $add_ons
