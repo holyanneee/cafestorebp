@@ -243,9 +243,6 @@ if (!isset($user_id)) {
             }
 
             ?>
-            <script>
-                console.log(<?= json_encode($order) ?>);
-            </script>
             <div class="row mt-5">
                 <div class="row d-flex justify-content-center align-items-center h-100">
                     <div class="col-md-10 col-lg-8 col-xl-6">
@@ -331,7 +328,7 @@ if (!isset($user_id)) {
                                             <span class="fw-bold text-white">
                                                 Status:
                                             </span>
-                                            <?php if ($order['payment_status'] == 'on Queue'): ?>
+                                            <?php if ($order['payment_status'] == 'On Queue'): ?>
                                                 <span class="badge bg-warning text-dark">Pending</span>
                                             <?php elseif ($order['payment_status'] == 'On Going'): ?>
                                                 <span class="badge bg-info text-dark">On Going</span>
@@ -342,14 +339,7 @@ if (!isset($user_id)) {
                                             <?php endif; ?>
                                         </h4>
                                     </div>
-                                    <div>
-                                        <h4 class="mb-0 text-white">
-                                            <span class="fw-bold text-white">
-                                                Total Quantity:
-                                            </span>
-                                            <?= $order['total_quantity'] ?>
-                                        </h4>
-                                    </div>
+
 
                                 </div>
                                 <!-- <ul id="progressbar-1" class="mx-0 mt-0 mb-5 px-0 pt-0 pb-4 mt-3">

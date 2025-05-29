@@ -3,7 +3,7 @@
 session_start();
 
 $admin_id = $_SESSION['barista_id'] ?? null;
-$cashier_name = $_SESSION['barista_name'] ?? 'Unknown'; // Fetch the cashier's name
+$barista_name = $_SESSION['barista_name'] ?? 'Unknown'; // Fetch the cashier's name
 if (!$admin_id) {
     header('location:login.php');
     exit();
@@ -18,27 +18,13 @@ if (isset($_POST['update_order']) && isset($_POST['is_ajax'])) {
 
     // Update both payment status and cashier in the orders table
     $update_orders = $conn->prepare("UPDATE `orders` SET payment_status = ?, barista = ? WHERE id = ?");
-    $update_orders->execute([$update_payment, $cashier_name, $order_id]);
+    $update_orders->execute([$update_payment, $barista_name, $order_id]);
 
     http_response_code(204); // No Content
     header('location:barista_order_taken.php');
     exit();
 }
 
-
-// Handle regular form submission
-if (isset($_POST['update_order'])) {
-    $order_id = $_POST['order_id'];
-    $update_payment = $_POST['update_payment'];
-    $update_payment = filter_var($update_payment, FILTER_SANITIZE_STRING);
-
-    // Update both payment status and cashier in the orders table
-    $update_orders = $conn->prepare("UPDATE `orders` SET payment_status = ?, cashier = ? WHERE id = ?");
-    $update_orders->execute([$update_payment, $cashier_name, $order_id]);
-
-    header('location:cashier_online_orders.php');
-    exit();
-}
 
 if (isset($_GET['delete'])) {
     $delete_id = $_GET['delete'];
@@ -67,7 +53,7 @@ $select_orders = $conn->prepare("
     GROUP BY o.id
 ");
 
-$select_orders->execute(['on Queue']);
+$select_orders->execute(['On Queue']);
 $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
 
 // format the orders
@@ -126,10 +112,6 @@ foreach ($orders as $order) {
 
 $orders = $formatted_orders;
 
-// $select_orders = $conn->prepare("SELECT o.*, 
-//     (SELECT SUM(op.subtotal) FROM `order_products` op WHERE op.order_id = o.id) AS total_price 
-//     FROM `orders` o 
-// WHERE payment_status = ? AND type= 'coffee'");
 
 ?>
 

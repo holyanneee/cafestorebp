@@ -90,7 +90,7 @@ try {
 
             // Insert into orders
             $stmt = $conn->prepare("INSERT INTO orders (user_id, name, number, email, method, address, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$user_id, $name, $number, $email, $method, $address, 'on Queue']);
+            $stmt->execute([$user_id, $name, $number, $email, $method, $address, 'On Queue']);
             $orderId = $conn->lastInsertId();
 
             // Insert order products

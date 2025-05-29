@@ -3,9 +3,8 @@
 session_start();
 
 $cashier_name = $_SESSION['cashier_name'] ?? 'Unknown';
-$cashier_id = $_SESSION['cashier_id'] ?? null;
-
-if (!$cashier_id) {
+$admin_id = $_SESSION['cashier_id'] ?? null;
+if (!$admin_id) {
    header('location:login.php');
    exit;
 }
@@ -37,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_data'])) {
             die("Insufficient stock for ingredient: " . htmlspecialchars($ingredient['name']));
          }
       }
-   }  
+   }
 
    // process the order 
    $insert = $conn->prepare("INSERT INTO orders (user_id, name, number, email, method, address, placed_on, cashier, receipt, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -51,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_data'])) {
       $placed_on,
       $cashier_name,
       '',
-      'on Queue'
+      'On Queue'
    ]);
 
    // Get the last inserted order ID
@@ -66,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_data'])) {
          $item['id'],
          $item['qty'],
          $item['basePrice'],
-         ($item['basePrice'] + $item['cupSizePrice'] + $item['addOnsTotal'] ) * $item['qty'],
+         ($item['basePrice'] + $item['cupSizePrice'] + $item['addOnsTotal']) * $item['qty'],
          json_encode($item['ingredientChoices']),
          json_encode([
             'size' => $item['cupSize'],
@@ -102,7 +101,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_data'])) {
    <link rel="stylesheet" href="css/admin_style.css">
 
    <style>
-      
       .pos-container {
          display: flex;
          gap: 20px;

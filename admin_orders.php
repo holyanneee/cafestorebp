@@ -321,7 +321,7 @@ $orders = $formatted_orders;
                 <select class="form-select form-select-sm" style="width: 140px;" id="statusFilter">
                     <option value="all" selected>All Statuses</option>
                     <option value="completed">Completed</option>
-                    <option value="on Queue">On Queue</option>
+                    <option value="On Queue">On Queue</option>
                     <option value="On Going">On Going</option>
                 </select>
                 <select class="form-select form-select-sm" style="width: 140px;" id="typeFilter">

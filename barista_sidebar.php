@@ -13,15 +13,6 @@
    <nav class="navbar">
       <a href="barista_page.php"><i class="fas fa-home"></i> Home</a>
 
-      <!-- Dashboard -->
-      <div class="dropdown menu-section">
-         <a href="#" class="dropdown-btn"><i class="fas fa-chart-line"></i> Dashboard</a>
-         <div class="dropdown-content">
-            <a href="#"><i class="fas fa-tachometer-alt"></i> Overview</a>
-            <a href="#"><i class="fas fa-chart-pie"></i> Data Analytics</a>
-         </div>
-      </div>
-
       <!-- Order Management -->
       <div class="dropdown menu-section">
          <a href="#" class="dropdown-btn"><i class="fas fa-shopping-cart"></i> Orders</a>

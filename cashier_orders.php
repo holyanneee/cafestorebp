@@ -18,7 +18,7 @@ if (isset($_POST['update_order']) && isset($_POST['is_ajax'])) {
     $stmt->execute([$order_id]);
     $current_order = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($current_order && $current_order['payment_status'] === 'on Queue' && $update_payment === 'completed') {
+    if ($current_order && $current_order['payment_status'] === 'On Queue' && $update_payment === 'completed') {
         header('location:cashier_order_error.php');
         exit();
     }
@@ -41,7 +41,7 @@ if (isset($_POST['update_order'])) {
     $stmt->execute([$order_id]);
     $current_order = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($current_order && $current_order['payment_status'] === 'on Queue' && $update_payment === 'completed') {
+    if ($current_order && $current_order['payment_status'] === 'On Queue' && $update_payment === 'completed') {
         header('location:cashier_order_error.php');
         exit();
     }
@@ -64,12 +64,6 @@ if (isset($_GET['delete'])) {
 $cashier_name = $_SESSION['cashier_name'] ?? null;
 
 if ($cashier_name) {
-    // $select_orders = $conn->prepare("SELECT o.*, 
-    // (SELECT SUM(op.subtotal) FROM `order_products` op WHERE op.order_id = o.id) AS total_price 
-    // FROM `orders` o 
-    // WHERE cashier = ? AND payment_status != ?");
-    // $select_orders->execute([$cashier_name, 'pending']);
-    // $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
 
     //  Fetch all orders and its relationship with order_products
     $select_orders = $conn->prepare("
@@ -82,14 +76,14 @@ if ($cashier_name) {
         o.type,
         GROUP_CONCAT(op.product_id) AS product_ids,
         (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
-    FROM `orders` o 
-    LEFT JOIN `order_products` op ON o.id = op.order_id
-    WHERE o.payment_status != ? AND o.cashier = ?  AND o.type = 'coffee'
-    GROUP BY o.id
+        FROM `orders` o 
+        LEFT JOIN `order_products` op ON o.id = op.order_id
+        WHERE o.payment_status != ? AND o.cashier = ?  AND o.type = 'coffee'
+        GROUP BY o.id
         ORDER BY o.id 
 ");
 
-    $select_orders->execute(['pending', $cashier_name]);
+    $select_orders->execute(['On Queue', $cashier_name]);
     $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
 
     // format the orders

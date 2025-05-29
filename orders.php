@@ -183,7 +183,7 @@ if (!isset($user_id)) {
                                     <h5 class="mb-1">Order ID: <?= $item['order_id'] ?></h5>
                                     <h5 class="mb-1">Placed on: <?= $item['placed_on'] ?></h5>
                                     <h5 class="mb-1">Status:
-                                       <?php if ($item['payment_status'] == 'on Queue'): ?>
+                                       <?php if ($item['payment_status'] == 'On Queue'): ?>
                                           <span class="badge bg-warning text-dark">Pending</span>
                                        <?php elseif ($item['payment_status'] == 'On Going'): ?>
                                           <span class="badge bg-info text-dark">On Going</span>

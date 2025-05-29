@@ -252,7 +252,7 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
                 <select class="form-select form-select-sm" style="width: 140px;" id="statusFilter">
                     <option value="all" selected>All Statuses</option>
                     <option value="completed">Completed</option>
-                    <option value="on Queue">On Queue</option>
+                    <option value="On Queue">On Queue</option>
                     <option value="On Going">On Going</option>
                 </select>
                 <input type="date" class="form-control form-control-sm" style="width: 140px;" id="dateFilter">
@@ -351,7 +351,7 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
                         <div class="mb-3">
                             <label for="updatePaymentStatus" class="form-label">Payment Status</label>
                             <select class="form-select form-select-sm" name="update_payment" id="updatePaymentStatus">
-                                <option value="on Queue">Accept Order</option>
+                                <option value="On Queue">Accept Order</option>
                             </select>
                         </div>
                     </div>
