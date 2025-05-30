@@ -78,7 +78,6 @@ if ($cashier_name) {
         (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
         FROM `orders` o 
         LEFT JOIN `order_products` op ON o.id = op.order_id
-        WHERE o.type = 'coffee'
         GROUP BY o.id
         ORDER BY o.id 
 ");
