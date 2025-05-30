@@ -27,36 +27,28 @@ $store_data = [
 ];
 
 $current_store = $_SESSION['store'];
-
+$current_store = $current_store ?? ''; // fallback if not set
 $type = ($current_store === 'kape_milagrosa') ? 'coffee' : 'online';
 
+$type = strtolower(trim($type)); // sanitize again
+
 $user_id = $_SESSION['user_id'] ?? null; // Use null coalescing operator for safety
-if (!isset($user_id) && (isset($_GET['cart_product_id']) || isset($_GET['fav_product_id']))) {
-   unset($_GET['cart_product_id']);
-   unset($_GET['fav_product_id']);
+if (!isset($user_id) && (isset($_GET['product_id']) || isset($_GET['action']))) {
+   unset($_GET['product_id']);
+   unset($_GET['action']);
    header('location:login.php');
    exit;
 }
+
 if (isset($user_id)) {
-   $count_cart_items = $conn->prepare("SELECT * FROM `cart` WHERE user_id = ? AND type = ?");
-   $count_cart_items->execute([$user_id, $type]);
-   $count_wishlist_items = $conn->prepare("SELECT * FROM `wishlist` WHERE user_id = ? AND type = ?");
-   $count_wishlist_items->execute([$user_id, $type]);
-   $count_orders_items = $conn->prepare("SELECT * FROM `orders` WHERE user_id = ? AND type = ?");
-   $count_orders_items->execute([$user_id, $type]);
-
-   $select_profile = $conn->prepare("SELECT * FROM `users` WHERE id = ?");
-   $select_profile->execute([$user_id]);
-   $fetch_profile = $select_profile->fetch(PDO::FETCH_ASSOC);
-
-   if (isset($_GET['fav_product_id'])) {
-      $prouct_id = $_GET['fav_product_id'];
+   if (isset($_GET['action']) && $_GET['action'] === 'add_to_wishlist' && isset($_GET['product_id'])) {
+      $prouct_id = $_GET['product_id'];
       $prouct_id = filter_var($prouct_id, FILTER_SANITIZE_SPECIAL_CHARS);
 
       $check_favourite_numbers = $conn->prepare("SELECT * FROM `wishlist` WHERE product_id = ? AND user_id = ? AND type = ?");
       $check_favourite_numbers->execute([$prouct_id, $user_id, $type]);
       if ($check_favourite_numbers->rowCount() > 0) {
-         $message[] = 'already added to wishlist!';
+         $messag = 'already added to wishlist!';
       } else {
          $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
          $select_product->execute([$prouct_id]);
@@ -64,26 +56,36 @@ if (isset($user_id)) {
             $fetch_product = $select_product->fetch(PDO::FETCH_ASSOC);
             $insert_wishlist = $conn->prepare("INSERT INTO `wishlist`(user_id, product_id ,type) VALUES(?,?,?)");
             $insert_wishlist->execute([$user_id, $prouct_id, $type]);
-            $message[] = 'added to wishlist!';
+            $messag = 'added to wishlist!';
          } else {
-            $message[] = 'product not found!';
+            $messag = 'product not found!';
          }
       }
       unset($_GET['fav_product_id']);
    }
-
-   if (isset($_GET['cart_product_id'])) {
-
-      $product_id = $_GET['cart_product_id'];
-
-      $check_cart_numbers = $conn->prepare("SELECT * FROM `cart` WHERE product_id = ? AND user_id = ?");
-      $check_cart_numbers->execute([$product_id, $user_id]);
-
+   
+   
+   if (isset($_GET['action']) && $_GET['action'] === 'add_to_cart' && isset($_GET['product_id'])) {
+      
+      $product_id = $_GET['product_id'];
+   
+      $check_cart_numbers = $conn->prepare("SELECT * FROM `cart` WHERE product_id = ? AND user_id = ? AND type = ?");
+      $check_cart_numbers->execute([$product_id, $user_id, $type]);
+   
       if ($check_cart_numbers->rowCount() > 0) {
-         // update quantity
-         $update_quantity = $conn->prepare("UPDATE `cart` SET quantity = quantity + 1 WHERE product_id = ? AND user_id = ?");
-         $update_quantity->execute([$product_id, $user_id]);
-         $message[] = 'quantity updated in cart!';
+         // update quantity and subtotal
+         $update_cart = $conn->prepare("UPDATE `cart` SET quantity = quantity + 1 WHERE product_id = ? AND user_id = ? AND type = ?");
+         $update_cart->execute([$product_id, $user_id, $type]);
+
+         // Fetch the updated cart item to get the new subtotal
+         $select_cart = $conn->prepare("SELECT * FROM `cart` WHERE product_id = ? AND user_id = ? AND type = ?");
+         $select_cart->execute([$product_id, $user_id, $type]);
+         $cart_item = $select_cart->fetch(PDO::FETCH_ASSOC);
+         $subtotal = $cart_item['subtotal'] *  $cart_item['quantity'];
+         $update_cart_subtotal = $conn->prepare("UPDATE `cart` SET subtotal = ? WHERE product_id = ? AND user_id = ? AND type = ?");
+         $update_cart_subtotal->execute([$subtotal, $product_id, $user_id, $type]);
+
+         $messag = 'quantity updated in cart!';
       } else {
          $check_wishlist_numbers = $conn->prepare("SELECT * FROM `wishlist` WHERE product_id = ? AND user_id = ? AND type = ?");
          $check_wishlist_numbers->execute([$product_id, $user_id, $type]);
@@ -96,40 +98,61 @@ if (isset($user_id)) {
          $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
          $select_product->execute([$product_id]);
          $product = $select_product->fetch(PDO::FETCH_ASSOC);
-         // fetch the ingredients
-         $ingredients = [];
-         foreach (json_decode($product['ingredients']) as $ingredient_id) {
-            $product_ingredients = $conn->prepare("SELECT * FROM `ingredients` WHERE id = ?");
-            $product_ingredients->execute([$ingredient_id]);
-            while ($ingredient = $product_ingredients->fetch(PDO::FETCH_ASSOC)) {
-               $ingredients[$ingredient['id']] = [
-                  'name' => $ingredient['name'],
-                  'level' => 'Regular'
-               ];
+   
+         if ($type == 'coffee') {
+            // fetch the ingredients
+            $ingredients = [];
+            foreach (json_decode($product['ingredients']) as $ingredient_id) {
+               $product_ingredients = $conn->prepare("SELECT * FROM `ingredients` WHERE id = ?");
+               $product_ingredients->execute([$ingredient_id]);
+               while ($ingredient = $product_ingredients->fetch(PDO::FETCH_ASSOC)) {
+                  $ingredients[$ingredient['id']] = [
+                     'name' => $ingredient['name'],
+                     'level' => 'Regular'
+                  ];
+               }
             }
+
+            // cup_size(json column)
+            $cup_size = 'Small';
+
+            $cup_sizes = json_decode($product['cup_sizes'], true); // Decode JSON to array
+            if (isset($cup_sizes['regular'])) {
+               $cup_size = 'Regular';
+            }
+            $cup_price = $cup_sizes[strtolower($cup_size)] ?? 0; // Use null coalescing operator for safety
+
+
+            $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, product_id, quantity, ingredients, cup_size, subtotal, type) VALUES(?, ?, 1, ?, ?, ?, 'coffee')");
+            $insert_cart->execute([
+               $user_id,
+               $product_id,
+               json_encode($ingredients),
+               json_encode([
+                  'size' => $cup_size,
+                  'price' => $cup_price
+               ]),
+               ($product['price'] + $cup_price) * 1
+            ]);
+         } else {
+            $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, product_id,subtotal, quantity, type) VALUES(?, ?, ?, 1, 'online')");
+            $insert_cart->execute([$user_id, $product_id, $subtotal = $product['price'] * 1]);
          }
-
-         // cup_size(json column)
-         $cup_size = 'Small';
-
-         $cup_sizes = json_decode($product['cup_sizes'], true); // Decode JSON to array
-         if (isset($cup_sizes['regular'])) {
-            $cup_size = 'Regular';
-         } 
-         $cup_price = $cup_sizes[strtolower($cup_size)] ?? 0; // Use null coalescing operator for safety
-         
-
-         $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, product_id, quantity, ingredients, cup_size, subtotal) VALUES(?, ?, 1, ?, ?, ?)");
-         $insert_cart->execute([$user_id, $product_id, json_encode($ingredients), json_encode([
-            'size' => $cup_size,
-            'price' => $cup_price
-         ]),
-         ($product['price'] + $cup_price) * 1
-      ]);
-         $message[] = 'added to cart!';
+         $message = 'added to cart!';
       }
       unset($_GET['cart_product_id']);
    }
+
+   $count_cart_items = $conn->prepare("SELECT * FROM `cart` WHERE user_id = ? AND type = ?");
+   $count_cart_items->execute([$user_id, $type]);
+   $count_wishlist_items = $conn->prepare("SELECT * FROM `wishlist` WHERE user_id = ? AND type = ?");
+   $count_wishlist_items->execute([$user_id, $type]);
+   $count_orders_items = $conn->prepare("SELECT * FROM `orders` WHERE user_id = ? AND type = ?");
+   $count_orders_items->execute([$user_id, $type]);
+
+   $select_profile = $conn->prepare("SELECT * FROM `users` WHERE id = ?");
+   $select_profile->execute([$user_id]);
+   $fetch_profile = $select_profile->fetch(PDO::FETCH_ASSOC);
 }
 $category = '';
 if (isset($_GET['category'])) {

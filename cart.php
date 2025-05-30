@@ -208,11 +208,17 @@ session_start();
 
             <?php
             $total = 0;
-            $select_cart = $conn->prepare("SELECT cart.*, products.name, products.price, products.image, products.cup_sizes as product_cup_sizes FROM `cart` 
-                                 JOIN `products` ON cart.product_id = products.id 
-                                 WHERE cart.user_id = ? AND cart.type = ? ORDER BY cart.id DESC");
+
+            $select_cart = $conn->prepare("SELECT cart.*, products.name, products.price, products.image, products.cup_sizes as product_cup_sizes 
+                               FROM cart 
+                               JOIN products ON cart.product_id = products.id 
+                               WHERE cart.user_id = ? AND cart.type = ?
+                               ORDER BY cart.id DESC");
+
             $select_cart->execute([$user_id, $type]);
+
             $cart_items = $select_cart->fetchAll(PDO::FETCH_ASSOC);
+
 
             $count_cart_items = $select_cart->rowCount();
             ?>
@@ -228,24 +234,26 @@ session_start();
 
                   </div>
                   <div>
-                      <p class="mb-0 h4">You have
+                     <p class="mb-0 h4">You have
                         <?= $count_cart_items ?> items in your cart
-                      </p>
-                    </div>
+                     </p>
                   </div>
-                  <?php if ($count_cart_items > 0): ?>
-                    <?php foreach ($cart_items as $item): ?>
-                      <?php
-                     $product_cup_sizes = isset($item['product_cup_sizes']) ? json_decode($item['product_cup_sizes'], true) : [];
-                     $cup_size = json_decode($item['cup_size'], true)['size'];
-                     
-                     $cup_size_price = json_decode($item['cup_size'], true)['price'];
-                     
+               </div>
+               <?php if ($count_cart_items > 0): ?>
+                  <?php foreach ($cart_items as $item): ?>
+                     <?php
+                     if ($type === 'coffee') {
+                        $product_cup_sizes = isset($item['product_cup_sizes']) ? json_decode($item['product_cup_sizes'], true) : [];
+                        $cup_size = json_decode($item['cup_size'], true)['size'];
 
-                     $ingredient_choices = isset($item['ingredients']) ? (json_decode($item['ingredients'], true)) : [];
-                     $add_ons = isset($item['add_ons']) ? (json_decode($item['add_ons'], true)) : [];
-                     $quantity = $item['quantity'] ?? 1;
-                     $special_instructions = isset($item['special_instructions']) ? htmlspecialchars($item['special_instructions'], ENT_QUOTES) : '';
+                        $cup_size_price = json_decode($item['cup_size'], true)['price'];
+
+
+                        $ingredient_choices = isset($item['ingredients']) ? (json_decode($item['ingredients'], true)) : [];
+                        $add_ons = isset($item['add_ons']) ? (json_decode($item['add_ons'], true)) : [];
+                        $quantity = $item['quantity'] ?? 1;
+                        $special_instructions = isset($item['special_instructions']) ? htmlspecialchars($item['special_instructions'], ENT_QUOTES) : '';
+                     }
                      ?>
                      <div class="card mb-3">
                         <div class="card-body">
@@ -257,32 +265,34 @@ session_start();
                                  </div>
                                  <div class="ms-3">
                                     <h4><?= $item['name'] ?></h4>
-                                    <!-- other details -->
-                                    <p class="h5 mb-0">Cup Size: <?= $cup_size ?>
-                                       (₱<?= number_format($cup_size_price, 2) ?>)</p>
-                                    <?php if (!empty($ingredient_choices)): ?>
-                                       <p class="h5 mb-0">
-                                          Ingredients:
-                                          <?php foreach ($ingredient_choices as $ingredient): ?>
-                                             <?= htmlspecialchars($ingredient['name']) ?>
-                                             (<?= htmlspecialchars($ingredient['level']) ?>),
-                                          <?php endforeach; ?>
+                                    <?php if ($type === 'coffee'): ?>
+                                       <!-- other details -->
+                                       <p class="h5 mb-0">Cup Size: <?= $cup_size ?>
+                                          (₱<?= number_format($cup_size_price, 2) ?>)</p>
+                                       <?php if (!empty($ingredient_choices)): ?>
+                                          <p class="h5 mb-0">
+                                             Ingredients:
+                                             <?php foreach ($ingredient_choices as $ingredient): ?>
+                                                <?= htmlspecialchars($ingredient['name']) ?>
+                                                (<?= htmlspecialchars($ingredient['level']) ?>),
+                                             <?php endforeach; ?>
 
-                                       </p>
-                                    <?php endif; ?>
-                                    <?php if (!empty($add_ons)): ?>
-                                       <p class="h5 mb-0">
-                                          Add-ons:
-                                          <?php foreach ($add_ons as $add_on): ?>
-                                             <?= htmlspecialchars($add_on['name']) ?> (₱<?= number_format($add_on['price'], 2) ?>),
-                                          <?php endforeach; ?>
-                                       </p>
-                                    <?php endif; ?>
-                                    <?php if (!empty($special_instructions)): ?>
-                                       <p class="h5 mb-0">
-                                          Instruction:
-                                          <?= htmlspecialchars($special_instructions) ?>
-                                       </p>
+                                          </p>
+                                       <?php endif; ?>
+                                       <?php if (!empty($add_ons)): ?>
+                                          <p class="h5 mb-0">
+                                             Add-ons:
+                                             <?php foreach ($add_ons as $add_on): ?>
+                                                <?= htmlspecialchars($add_on['name']) ?> (₱<?= number_format($add_on['price'], 2) ?>),
+                                             <?php endforeach; ?>
+                                          </p>
+                                       <?php endif; ?>
+                                       <?php if (!empty($special_instructions)): ?>
+                                          <p class="h5 mb-0">
+                                             Instruction:
+                                             <?= htmlspecialchars($special_instructions) ?>
+                                          </p>
+                                       <?php endif ?>
                                     <?php endif ?>
                                  </div>
                               </div>
@@ -292,22 +302,30 @@ session_start();
                                  </div>
                                  <div style="width: 80px;">
                                     <h5 class="mb-0">
-                                       ₱<?= number_format(($item['price'] + $cup_size_price) * $item['quantity'], 2) ?>
+                                       <?php
+                                       $price = $item['price'];
+                                       if ($type === 'coffee') {
+                                          $price = ($item['price'] + $cup_size_price) * $item['quantity'];
+                                       }
+                                       ?>
+                                       ₱<?= number_format($price, 2) ?>
                                     </h5>
                                  </div>
 
                                  <div class="d-flex justify-content-between align-items-center">
                                     <a href="#!" class="text-muted remove-btn" data-id="<?= $item['id'] ?>">Remove</a>
-                                    <span class="mx-2 text-center">|</span>
-                                    <a href="#!" class="customize-btn" data-id="<?= $item['id'] ?>"
-                                       data-product-id="<?= $item['product_id'] ?>"
-                                       data-name="<?= htmlspecialchars($item['name']) ?>" data-base="<?= $item['price'] ?>"
-                                       data-cup-size="<?= $cup_size ?>" data-cup-size-price="<?= $cup_size_price ?>"
-                                       data-ingredient-choices='<?= json_encode($ingredient_choices) ?>'
-                                       data-add-ons='<?= json_encode($add_ons) ?>' data-quantity="<?= $quantity ?>"
-                                       data-special-instructions="<?= $special_instructions ?>">
-                                       Customize
-                                    </a>
+                                    <?php if ($type === 'coffee'): ?>
+                                       <span class="mx-2 text-center">|</span>
+                                       <a href="#!" class="customize-btn" data-id="<?= $item['id'] ?>"
+                                          data-product-id="<?= $item['product_id'] ?>"
+                                          data-name="<?= htmlspecialchars($item['name']) ?>" data-base="<?= $item['price'] ?>"
+                                          data-cup-size="<?= $cup_size ?>" data-cup-size-price="<?= $cup_size_price ?>"
+                                          data-ingredient-choices='<?= json_encode($ingredient_choices) ?>'
+                                          data-add-ons='<?= json_encode($add_ons) ?>' data-quantity="<?= $quantity ?>"
+                                          data-special-instructions="<?= $special_instructions ?>">
+                                          Customize
+                                       </a>
+                                    <?php endif ?>
 
                                  </div>
                               </div>
@@ -333,18 +351,30 @@ session_start();
                      <div class="d-flex flex-column mb-4">
                         <?php foreach ($cart_items as $item) { ?>
                            <?php
-                           $cup_size = isset($item['cup_size']) ? (json_decode($item['cup_size'], true)['size']) : 'Regular';
-                           $cup_size_price = isset($item['cup_size']) ? (json_decode($item['cup_size'], true)['price']) : 0;
-                           $ingredient_choices = isset($item['ingredients']) ? (json_decode($item['ingredients'], true)) : [];
-                           $add_ons = isset($item['add_ons']) ? (json_decode($item['add_ons'], true)) : [];
-                           $special_instructions = isset($item['special_instruction']) ? htmlspecialchars($item['special_instruction'], ENT_QUOTES) : '';
-                           $total = $total + ($item['price'] + $cup_size_price) * $item['quantity'];
+                           if ($type === 'coffee' && $item['cup_size']) {
+
+                              $cup_size = isset($item['cup_size']) ? (json_decode($item['cup_size'], true)['size']) : 'Regular';
+                              $cup_size_price = isset($item['cup_size']) ? (json_decode($item['cup_size'], true)['price']) : 0;
+                              $ingredient_choices = isset($item['ingredients']) ? (json_decode($item['ingredients'], true)) : [];
+                              $add_ons = isset($item['add_ons']) ? (json_decode($item['add_ons'], true)) : [];
+                              $special_instructions = isset($item['special_instruction']) ? htmlspecialchars($item['special_instruction'], ENT_QUOTES) : '';
+                              $total = $total + ($item['price'] + $cup_size_price) * $item['quantity'];
+                           } else {
+                              $total = $total + $item['price'];
+                           }
                            ?>
                            <div class="d-flex align-items-center justify-content-between mb-2">
-                              <p class="h4 text-white"><?= $item['name'] ?> (<?= $cup_size ?>) x <?= $item['quantity'] ?>
+                              <p class="h4 text-white"><?= $item['name'] ?>    <?= $type === 'coffee' ? "($cup_size)" : '' ?>
+                                 x <?= $item['quantity'] ?>
                               </p>
                               <p class="h4 text-white">
-                                 ₱<?= number_format(($item['price'] + $cup_size_price) * $item['quantity'], 2) ?>
+                                 <?php
+                                 $price = $item['price'];
+                                 if ($type === 'coffee') {
+                                    $price = ($item['price'] + $cup_size_price) * $item['quantity'];
+                                 }
+                                 ?>
+                                 ₱<?= number_format($price, 2) ?>
                               </p>
                            </div>
                         <?php } ?>
@@ -433,7 +463,8 @@ session_start();
             <div class="modal-body">
                <div class="mb-3">
                   <label for="checkoutName" class="form-label">Name</label>
-                  <input type="text" class="form-control" id="checkoutName" name="name" value="<?= $fetch_profile['name']?>" required>
+                  <input type="text" class="form-control" id="checkoutName" name="name"
+                     value="<?= $fetch_profile['name'] ?>" required>
                </div>
                <div class="mb-3">
                   <label for="checkoutNumber" class="form-label">Phone Number</label>
@@ -441,7 +472,8 @@ session_start();
                </div>
                <div class="mb-3">
                   <label for="checkoutEmail" class="form-label">Email</label>
-                  <input type="email" class="form-control" id="checkoutEmail" name="email" value="<?= $fetch_profile['email']?>" required>
+                  <input type="email" class="form-control" id="checkoutEmail" name="email"
+                     value="<?= $fetch_profile['email'] ?>" required>
                </div>
                <div class="mb-3">
                   <label for="checkoutMethod" class="form-label">Payment Method</label>
@@ -481,6 +513,8 @@ session_start();
       let cart = [];
       let selectedProduct = null;
       let modalInstance = null;
+
+      console.log('<?= $type ?>');
 
       document.addEventListener('DOMContentLoaded', function () {
          modalInstance = new bootstrap.Modal(document.getElementById('productModal'));
@@ -535,19 +569,28 @@ session_start();
                method: 'POST',
                body: formData
             })
-               .then(response => response.json())
-               .then(data => {
-                  if (data.success) {
-                     alert('Order placed successfully!');
-                     window.location.reload(); // or redirect
-                  } else {
-                     alert('Checkout failed: ' + data.message);
+               .then(async response => {
+                  const text = await response.text(); // read the raw response
+                  console.log('Raw response:', text);
+
+                  try {
+                     const data = JSON.parse(text);
+                     if (data.success) {
+                        alert('Order placed successfully!');
+                        window.location.reload();
+                     } else {
+                        alert('Checkout failed: ' + data.message);
+                     }
+                  } catch (e) {
+                     console.error('JSON parse error:', e);
+                     alert('Server response was not valid JSON:\n' + text);
                   }
                })
                .catch(error => {
-                  console.error('Checkout error:', error);
+                  console.error('Fetch error:', error);
                   alert('Something went wrong!');
                });
+
          });
 
          document.getElementById('checkoutMethod').addEventListener('change', function () {

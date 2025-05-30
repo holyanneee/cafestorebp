@@ -132,14 +132,13 @@ session_start();
             <div class="col-lg-5">
                <div class="card bg-success text-white rounded-3 mt-5">
                   <div class="card-body">
-                     <button type="button" 
-                        class="btn btn-danger btn-block btn-lg" id="">
+                     <button type="button" class="btn btn-danger btn-block btn-lg" id="remove-all-btn">
                         <span class="text-white">
                            Remoive All
                            <i class="fas fa-trash ms-2 text-white"></i>
                         </span>
                      </button>
-                     <button type="button"  class="btn btn-info btn-block btn-lg" id="add-all-btn">
+                     <button type="button" class="btn btn-info btn-block btn-lg" id="add-all-btn">
                         <span class="text-white">
                            Add to all items to cart
                            <i class="fas fa-cart-shopping ms-2 text-white"></i>

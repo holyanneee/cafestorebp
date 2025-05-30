@@ -228,13 +228,13 @@ session_start();
                                     </p>
                                 </div>
                                 <div>
-                                    <a href="shop.php?fav_product_id=<?= $product['id']; ?>" class="btn-favourite">
+                                    <a href="shop.php?action=add_to_wishlist&product_id=<?= $product['id']; ?>" class="btn-favourite">
                                         <i class="fas fa-heart"></i>
                                     </a>
                                 </div>
                             </div>
                             <div class="card-footer">
-                                <a href="shop.php?cart_product_id=<?= $product['id']; ?>" class="btn-cart">
+                                <a href="shop.php?action=add_to_cart&product_id=<?= $product['id']; ?>" class="btn-cart">
                                     <i class="fas fa-shopping-cart"></i> Add to Cart
                                 </a>
                             </div>
