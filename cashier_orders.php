@@ -69,21 +69,21 @@ if ($cashier_name) {
     $select_orders = $conn->prepare("
     SELECT 
         o.id AS order_id,
-        o.name,
-        o.email,
-        o.placed_on,
-        o.payment_status,
-        o.type,
+        MAX(o.name) AS name,
+        MAX(o.email) AS email,
+        MAX(o.placed_on) AS placed_on,
+        MAX(o.payment_status) AS payment_status,
+        MAX(o.type) AS type,
         GROUP_CONCAT(op.product_id) AS product_ids,
         (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
         FROM `orders` o 
         LEFT JOIN `order_products` op ON o.id = op.order_id
-        WHERE o.payment_status != ? AND o.cashier = ?  AND o.type = 'coffee'
+        WHERE o.type = 'coffee'
         GROUP BY o.id
         ORDER BY o.id 
 ");
+    $select_orders->execute();
 
-    $select_orders->execute(['On Queue', $cashier_name]);
     $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
 
     // format the orders
