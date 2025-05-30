@@ -49,10 +49,83 @@ if (isset($_GET['delete'])) {
 }
 
 // Fetch all orders
-$select_orders = $conn->prepare("SELECT * FROM `orders` WHERE payment_status = ? AND type = 'online' ORDER BY id DESC");
-$select_orders->execute(['pending']);
+$select_orders = $conn->prepare("    SELECT   o.id AS order_id,
+        MAX(o.name) AS name,
+        MAX(o.email) AS email,
+        MAX(o.placed_on) AS placed_on,
+        MAX(o.payment_status) AS payment_status,
+        MAX(o.type) AS type,
+        GROUP_CONCAT(op.product_id) AS product_ids,
+        (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
+        FROM `orders` o 
+        LEFT JOIN `order_products` op ON o.id = op.order_id
+        WHERE o.type = 'online'
+        GROUP BY o.id
+        ORDER BY o.id ");
+$select_orders->execute();
 $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
 
+// format the orders
+$formatted_orders = [];
+foreach ($orders as $order) {
+    $formatted_orders[] = [
+        'order_id' => $order['order_id'],
+        'name' => htmlspecialchars($order['name']),
+        'email' => htmlspecialchars($order['email']),
+        'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
+        'type' => htmlspecialchars($order['type']),
+        'payment_status' => htmlspecialchars($order['payment_status']),
+        'total_price' => number_format((int) $order['total_price'], 2),
+        'products' => array_filter(array_map(function ($product_id) use ($conn, $order) {
+            // Fetch product details
+            $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
+            $select_product->execute([$product_id]);
+            $product = $select_product->fetch(PDO::FETCH_ASSOC);
+            // Check if product exists
+            if (!$product) {
+                return null; // Skip if product not found
+            }
+
+            // Get the quantity and subtotal from order_products
+            $select_order_product = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ? AND product_id = ?");
+            $select_order_product->execute([$order['order_id'], $product_id]);
+            $order_product = $select_order_product->fetch(PDO::FETCH_ASSOC);
+            if (!$order_product) {
+                return null; // Skip if order product not found
+            }
+            $product['quantity'] = $order_product['quantity'];
+            $product['subtotal'] = $order_product['subtotal'];
+
+            return [
+                'id' => $product['id'],
+                'name' => htmlspecialchars($product['name'] ?? '', ENT_QUOTES, 'UTF-8'),
+                'quantity' => htmlspecialchars($product['quantity'] ?? '0', ENT_QUOTES, 'UTF-8'),
+                'price' => number_format($product['price'] ?? 0, 2),
+                'subtotal' => number_format($product['subtotal'] ?? 0, 2),
+                'cup_sizes' => json_decode($order_product['cup_sizes'] ?? '[]', true) ?: [],
+                'ingredients' => array_map(function ($ingredient) {
+                    return [
+                        'name' => htmlspecialchars($ingredient['name'] ?? '', ENT_QUOTES, 'UTF-8'),
+                        'level' => htmlspecialchars($ingredient['level'] ?? '', ENT_QUOTES, 'UTF-8')
+                    ];
+                }, json_decode($order_product['ingredients'] ?? '[]', true) ?: []),
+                'add_ons' => array_map(function ($addOn) {
+                    return [
+                        'name' => htmlspecialchars($addOn['name'] ?? '', ENT_QUOTES, 'UTF-8'),
+                        'price' => number_format($addOn['price'] ?? 0, 2)
+                    ];
+                }, json_decode($order_product['add_ons'] ?? '[]', true) ?: []),
+            ];
+        }, explode(',', $order['product_ids'])))
+    ];
+
+    // Sort products by order_id
+    usort($formatted_orders, function ($a, $b) {
+        return $a['order_id'] <=> $b['order_id'];
+    });
+}
+
+$orders = $formatted_orders;
 ?>
 
 
@@ -282,9 +355,9 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
                                 $status_class = $order['payment_status'] == 'completed' ? 'status-completed' : 'status-pending';
                                 $order_date = date('M d, Y', strtotime($order['placed_on']));
                                 ?>
-                                <tr data-id="<?= $order['id'] ?>" data-status="<?= $order['payment_status'] ?>"
+                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['payment_status'] ?>"
                                     data-date="<?= date('Y-m-d', strtotime($order['placed_on'])) ?>">
-                                    <td>#<?= $order['id'] ?></td>
+                                    <td>#<?= $order['order_id'] ?></td>
                                     <td>
                                         <div class="fw-semibold" style="font-size: 12px;">
                                             <?= htmlspecialchars($order['name']) ?>
@@ -302,16 +375,17 @@ $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
                                     </td>
                                     <td>
                                         <button class="action-btn btn-view" data-bs-toggle="modal"
-                                            data-bs-target="#viewOrderModal" data-order-id="<?= $order['id'] ?>">
+                                            data-bs-target="#viewOrderModal-<?= $order['order_id'] ?>">
                                             View
                                         </button>
+                                        <?php include 'view_order_modal.php'; ?>
                                         <button class="action-btn btn-update" data-bs-toggle="modal"
-                                            data-bs-target="#updateOrderModal" data-id="<?= $order['id'] ?>"
+                                            data-bs-target="#updateOrderModal" data-id="<?= $order['order_id'] ?>"
                                             data-status="<?= $order['payment_status'] ?>">
                                             Update
                                         </button>
-                                        <a href="admin_orders.php?delete=<?= $order['id'] ?>" class="action-btn btn-delete"
-                                            onclick="return confirm('Delete this order?');">
+                                        <a href="admin_orders.php?delete=<?= $order['order_id'] ?>"
+                                            class="action-btn btn-delete" onclick="return confirm('Delete this order?');">
                                             Delete
                                         </a>
                                     </td>

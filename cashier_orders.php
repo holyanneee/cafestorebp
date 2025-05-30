@@ -94,6 +94,7 @@ if ($cashier_name) {
             'name' => htmlspecialchars($order['name']),
             'email' => htmlspecialchars($order['email']),
             'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
+            'type' => htmlspecialchars($order['type']),
             'payment_status' => htmlspecialchars($order['payment_status']),
             'total_price' => number_format((int) $order['total_price'], 2),
             'products' => array_filter(array_map(function ($product_id) use ($conn, $order) {

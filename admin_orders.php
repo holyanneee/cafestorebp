@@ -486,18 +486,21 @@ $orders = $formatted_orders;
 
             function filterOrders() {
                 const statusValue = statusFilter.value;
+                const typeValue = typeFilter.value;
                 const dateValue = dateFilter.value;
 
                 let hasVisibleRows = false;
 
                 tableRows.forEach(row => {
                     const rowStatus = row.getAttribute('data-status');
+                    const rowType = row.getAttribute('data-type');
                     const rowDate = row.getAttribute('data-date');
 
                     let matchesStatus = statusValue === 'all' || rowStatus === statusValue;
+                    let matchesType = typeValue === 'all' || rowType === typeValue;
                     let matchesDate = !dateValue || rowDate === dateValue;
 
-                    if (matchesStatus && matchesDate) {
+                    if (matchesStatus && matchesType && matchesDate) {
                         row.style.display = '';
                         hasVisibleRows = true;
                     } else {
