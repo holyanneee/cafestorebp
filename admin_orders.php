@@ -14,7 +14,7 @@ if (isset($_POST['update_order']) && isset($_POST['is_ajax'])) {
     $update_payment = $_POST['update_payment'];
     $update_payment = filter_var($update_payment, FILTER_SANITIZE_STRING);
 
-    $update_orders = $conn->prepare("UPDATE `orders` SET payment_status = ? WHERE id = ?");
+    $update_orders = $conn->prepare("UPDATE `orders` SET status = ? WHERE id = ?");
     $update_orders->execute([$update_payment, $order_id]);
 
     header('Content-Type: application/json');
@@ -32,7 +32,7 @@ if (isset($_POST['update_order'])) {
     $order_id = $_POST['order_id'];
     $update_payment = $_POST['update_payment'];
     $update_payment = filter_var($update_payment, FILTER_SANITIZE_STRING);
-    $update_orders = $conn->prepare("UPDATE `orders` SET payment_status = ? WHERE id = ?");
+    $update_orders = $conn->prepare("UPDATE `orders` SET status = ? WHERE id = ?");
     $update_orders->execute([$update_payment, $order_id]);
     header('location:admin_orders.php');
     exit();
@@ -53,7 +53,7 @@ $select_orders = $conn->prepare("
         o.name,
         o.email,
         o.placed_on,
-        o.payment_status,
+        o.status,
         o.type,
         GROUP_CONCAT(op.product_id) AS product_ids,
         (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
@@ -75,7 +75,7 @@ foreach ($orders as $order) {
         'email' => htmlspecialchars($order['email']),
         'type' => htmlspecialchars($order['type']),
         'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
-        'payment_status' => htmlspecialchars($order['payment_status']),
+        'status' => htmlspecialchars($order['status']),
         'total_price' => number_format($order['total_price'], 2),
         'products' => array_filter(array_map(function ($product_id) use ($conn, $order) {
             // Fetch product details
@@ -352,10 +352,10 @@ $orders = $formatted_orders;
                         <?php if (!empty($orders)): ?>
                             <?php foreach ($orders as $order): ?>
                                 <?php
-                                $status_class = $order['payment_status'] == 'completed' ? 'status-completed' : 'status-pending';
+                                $status_class = $order['status'] == 'completed' ? 'status-completed' : 'status-pending';
                                 $order_date = date('M d, Y', strtotime($order['placed_on']));
                                 ?>
-                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['payment_status'] ?>"
+                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['status'] ?>"
                                     data-date="<?= date('Y-m-d', strtotime($order['placed_on'])) ?>"
                                     data-type="<?= $order['type'] ?>">
                                     <td>#<?= $order['order_id'] ?></td>
@@ -371,7 +371,7 @@ $orders = $formatted_orders;
                                     <td>₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?></td>
                                     <td>
                                         <span class="status-badge <?= $status_class ?>">
-                                            <?= ucfirst($order['payment_status']) ?>
+                                            <?= ucfirst($order['status']) ?>
                                         </span>
                                     </td>
                                     <td>
@@ -383,7 +383,7 @@ $orders = $formatted_orders;
                                         <?php include 'view_order_modal.php'; ?>
                                         <button class="action-btn btn-update" data-bs-toggle="modal"
                                             data-bs-target="#updateOrderModal" data-id="<?= $order['order_id'] ?>"
-                                            data-status="<?= $order['payment_status'] ?>">
+                                            data-status="<?= $order['status'] ?>">
                                             Update
                                         </button>
                                         <a href="admin_orders.php?delete=<?= $order['order_id'] ?>"

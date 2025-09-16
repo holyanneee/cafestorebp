@@ -10,7 +10,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ingredients'])) {
         foreach ($_POST['ingredients'] as $product_index => $ingredient_inputs) {
             foreach ($ingredient_inputs as $ingredient_name => $used_amount) {
                 $used_amount = floatval($used_amount);
-                if ($used_amount <= 0) continue;
+                if ($used_amount <= 0)
+                    continue;
 
                 // Get product name from POST indirectly
                 // (Optional: you can pass hidden inputs with product_name if needed)
@@ -20,7 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ingredients'])) {
                 $stmt->execute([$ingredient_name]);
                 $ingredient = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                if (!$ingredient) continue;
+                if (!$ingredient)
+                    continue;
 
                 $ingredient_id = $ingredient['id'];
                 $current_stock = floatval($ingredient['stock']);
@@ -34,10 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ingredients'])) {
                 $update_stmt = $conn->prepare("UPDATE ingredients SET stock = ? WHERE id = ?");
                 $update_stmt->execute([$new_stock, $ingredient_id]);
 
-                // Step 3: Update payment_status of the order
+                // Step 3: Update status of the order
                 $order_id = $_POST['order_id'] ?? null;
                 if ($order_id) {
-                    $update_status_stmt = $conn->prepare("UPDATE orders SET payment_status = 'completed' WHERE id = ?");
+                    $update_status_stmt = $conn->prepare("UPDATE orders SET status = 'completed' WHERE id = ?");
                     $update_status_stmt->execute([$order_id]);
                 }
 

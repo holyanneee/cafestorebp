@@ -109,7 +109,7 @@ CREATE TABLE `orders` (
   `email` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
   `method` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
   `address` varchar(500) COLLATE utf8mb4_general_ci NOT NULL,
-  `payment_status` varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'on Queue',
+  `status` varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'on Queue',
   `cashier` text COLLATE utf8mb4_general_ci,
   `receipt` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `barista` text COLLATE utf8mb4_general_ci,
@@ -123,7 +123,7 @@ CREATE TABLE `orders` (
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `user_id`, `name`, `number`, `email`, `method`, `address`, `payment_status`, `cashier`, `receipt`, `barista`, `type`, `placed_on`, `created_at`, `updated_at`) VALUES
+INSERT INTO `orders` (`id`, `user_id`, `name`, `number`, `email`, `method`, `address`, `status`, `cashier`, `receipt`, `barista`, `type`, `placed_on`, `created_at`, `updated_at`) VALUES
 (11, 42, 'Melinda Downs', '09512323111', 'muwybave@mailinator.com', 'Cash on Delivery', 'qweqwe', 'on Queue', NULL, NULL, NULL, 'coffee', '2025-05-28 08:05:42', '2025-05-28 08:05:42', '2025-05-28 08:05:42');
 
 -- --------------------------------------------------------

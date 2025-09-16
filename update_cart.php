@@ -91,10 +91,17 @@ try {
 
             // Insert into orders
             $stmt = $conn->prepare("INSERT INTO orders 
-                (user_id, name, number, email, method, address, payment_status, type) 
+                (user_id, name, number, email, method, address, status, type) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
-                $user_id, $name, $number, $email, $method, $address, 'On Queue', $type
+                $user_id,
+                $name,
+                $number,
+                $email,
+                $method,
+                $address,
+                'On Queue',
+                $type
             ]);
             $orderId = $conn->lastInsertId();
 
@@ -140,7 +147,7 @@ try {
             // Clear cart
             $conn->prepare("DELETE FROM cart WHERE user_id = ? AND type = ?")->execute([$user_id, $type]);
             ob_clean(); // ADD THIS to ensure clean output buffer
-            echo json_encode(['success' => true, 'message'=> 'Checkout successful']);
+            echo json_encode(['success' => true, 'message' => 'Checkout successful']);
             exit;
         }
     }

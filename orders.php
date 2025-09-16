@@ -78,7 +78,7 @@ if (!isset($user_id)) {
                 o.name,
                 o.email,
                 o.placed_on,
-                o.payment_status,
+                o.status,
                 o.type,
                 GROUP_CONCAT(op.product_id) AS product_ids,
                 (SELECT SUM(op.subtotal) FROM `order_products` op WHERE op.order_id = o.id) AS total_price
@@ -100,7 +100,7 @@ if (!isset($user_id)) {
                   'email' => htmlspecialchars($order['email']),
                   'type' => htmlspecialchars($order['type']),
                   'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
-                  'payment_status' => htmlspecialchars($order['payment_status']),
+                  'status' => htmlspecialchars($order['status']),
                   'total_price' => number_format($order['total_price'], 2),
                   'total_quantity' => array_sum(array_map(function ($product_id) use ($conn, $order) {
                      $select_order_product = $conn->prepare("SELECT quantity FROM `order_products` WHERE order_id = ? AND product_id = ?");
@@ -183,11 +183,11 @@ if (!isset($user_id)) {
                                     <h5 class="mb-1">Order ID: <?= $item['order_id'] ?></h5>
                                     <h5 class="mb-1">Placed on: <?= $item['placed_on'] ?></h5>
                                     <h5 class="mb-1">Status:
-                                       <?php if ($item['payment_status'] == 'On Queue'): ?>
+                                       <?php if ($item['status'] == 'On Queue'): ?>
                                           <span class="badge bg-warning text-dark">Pending</span>
-                                       <?php elseif ($item['payment_status'] == 'On Going'): ?>
+                                       <?php elseif ($item['status'] == 'On Going'): ?>
                                           <span class="badge bg-info text-dark">On Going</span>
-                                       <?php elseif ($item['payment_status'] == 'completed'): ?>
+                                       <?php elseif ($item['status'] == 'completed'): ?>
                                           <span class="badge bg-success">Completed</span>
                                        <?php else: ?>
                                           <span class="badge bg-danger">Failed</span>

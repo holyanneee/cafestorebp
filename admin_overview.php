@@ -12,25 +12,25 @@ if (!$admin_id) {
 // fetch earnings for the current month
 $month = date('m');
 $year = date('Y');
-$select_monthly_earnings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_monthly_earnings FROM order_products op JOIN orders o ON op.order_id = o.id WHERE MONTH(o.placed_on) = ? AND YEAR(o.placed_on) = ? AND o.payment_status = 'completed'");
+$select_monthly_earnings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_monthly_earnings FROM order_products op JOIN orders o ON op.order_id = o.id WHERE MONTH(o.placed_on) = ? AND YEAR(o.placed_on) = ? AND o.status = 'completed'");
 $select_monthly_earnings->execute([$month, $year]);
 $fetch_monthly_earnings = $select_monthly_earnings->fetch(PDO::FETCH_ASSOC);
 $total_monthly_earnings = $fetch_monthly_earnings['total_monthly_earnings'] ?? 0;
 
 // fetch earnings for the current year
-$select_annual_earnings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_annual_earnings FROM order_products op JOIN orders o ON op.order_id = o.id WHERE YEAR(o.placed_on) = ? AND o.payment_status = 'completed'");
+$select_annual_earnings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_annual_earnings FROM order_products op JOIN orders o ON op.order_id = o.id WHERE YEAR(o.placed_on) = ? AND o.status = 'completed'");
 $select_annual_earnings->execute([$year]);
 $fetch_annual_earnings = $select_annual_earnings->fetch(PDO::FETCH_ASSOC);
 $total_annual_earnings = $fetch_annual_earnings['total_annual_earnings'] ?? 0;
 
 // fetch total orders current month
-$select_monthly_orders = $conn->prepare("SELECT COUNT(*) AS total_monthly_orders FROM orders WHERE MONTH(placed_on) = ? AND YEAR(placed_on) = ? AND payment_status = 'completed'");
+$select_monthly_orders = $conn->prepare("SELECT COUNT(*) AS total_monthly_orders FROM orders WHERE MONTH(placed_on) = ? AND YEAR(placed_on) = ? AND status = 'completed'");
 $select_monthly_orders->execute([$month, $year]);
 $fetch_monthly_orders = $select_monthly_orders->fetch(PDO::FETCH_ASSOC);
 $total_monthly_orders = $fetch_monthly_orders['total_monthly_orders'] ?? 0;
 
 // fetch total orders current year
-$select_annual_orders = $conn->prepare("SELECT COUNT(*) AS total_annual_orders FROM orders WHERE YEAR(placed_on) = ? AND payment_status = 'completed'");
+$select_annual_orders = $conn->prepare("SELECT COUNT(*) AS total_annual_orders FROM orders WHERE YEAR(placed_on) = ? AND status = 'completed'");
 $select_annual_orders->execute([$year]);
 $fetch_annual_orders = $select_annual_orders->fetch(PDO::FETCH_ASSOC);
 $total_annual_orders = $fetch_annual_orders['total_annual_orders'] ?? 0;
@@ -47,7 +47,7 @@ $select_popular_products = $conn->prepare("
     FROM order_products op 
     JOIN products p ON op.product_id = p.id 
     JOIN orders o ON op.order_id = o.id
-    WHERE o.payment_status = 'completed'
+    WHERE o.status = 'completed'
     GROUP BY op.product_id 
     ORDER BY total_quantity DESC 
     LIMIT 5
@@ -61,7 +61,7 @@ $select_recent_order = $conn->prepare("
         o.id AS order_id, 
         o.name, 
         SUM(op.price * op.quantity) AS total_amount, 
-        o.payment_status, 
+        o.status, 
         o.placed_on
     FROM orders o 
     JOIN order_products op ON o.id = op.order_id 
@@ -421,8 +421,8 @@ $recent_orders = $select_recent_order->fetchAll(PDO::FETCH_ASSOC);
                                                         <td>₱ <?= number_format($recent_order['total_amount'], 2) ?></td>
                                                         <td>
                                                             <span
-                                                                class="status-badge status-<?= strtolower($recent_order['payment_status']) ?>">
-                                                                <?= ucfirst($recent_order['payment_status']) ?>
+                                                                class="status-badge status-<?= strtolower($recent_order['status']) ?>">
+                                                                <?= ucfirst($recent_order['status']) ?>
                                                             </span>
                                                         </td>
                                                         <td><?= date('F j, Y', strtotime($recent_order['placed_on'])) ?></td>

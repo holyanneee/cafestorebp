@@ -19,7 +19,7 @@ $select_orders = $conn->prepare("
         o.name,
         o.email,
         o.placed_on,
-        o.payment_status,
+        o.status,
         o.type,
         o.method,
         o.address,
@@ -282,7 +282,7 @@ $conn = null;
               </div>
             </div>
             <div class="ingredient-inputs">
-             
+
             </div>
           </div>
         <?php endforeach; ?>

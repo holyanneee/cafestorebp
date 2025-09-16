@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_data'])) {
    }
 
    // process the order 
-   $insert = $conn->prepare("INSERT INTO orders (user_id, name, number, email, method, address, placed_on, cashier, receipt, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+   $insert = $conn->prepare("INSERT INTO orders (user_id, name, number, email, method, address, placed_on, cashier, receipt, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
    $insert->execute([
       $admin_id,
       'Walk-in Customer',

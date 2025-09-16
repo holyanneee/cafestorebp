@@ -151,7 +151,7 @@ if (!isset($user_id)) {
                 o.name,
                 o.email,
                 o.placed_on,
-                o.payment_status,
+                o.status,
                 o.type,
                 o.number,
                 o.method,
@@ -179,7 +179,7 @@ if (!isset($user_id)) {
                     'method' => htmlspecialchars($order['method']),
                     'number' => htmlspecialchars($order['number']),
                     'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
-                    'payment_status' => htmlspecialchars($order['payment_status']),
+                    'status' => htmlspecialchars($order['status']),
                     'total_price' => number_format($order['total_price'], 2),
                     'total_quantity' => array_sum(array_map(function ($product_id) use ($conn, $order) {
                         $select_order_product = $conn->prepare("SELECT quantity FROM `order_products` WHERE order_id = ? AND product_id = ?");
@@ -328,11 +328,11 @@ if (!isset($user_id)) {
                                             <span class="fw-bold text-white">
                                                 Status:
                                             </span>
-                                            <?php if ($order['payment_status'] == 'On Queue'): ?>
+                                            <?php if ($order['status'] == 'On Queue'): ?>
                                                 <span class="badge bg-warning text-dark">Pending</span>
-                                            <?php elseif ($order['payment_status'] == 'On Going'): ?>
+                                            <?php elseif ($order['status'] == 'On Going'): ?>
                                                 <span class="badge bg-info text-dark">On Going</span>
-                                            <?php elseif ($order['payment_status'] == 'completed'): ?>
+                                            <?php elseif ($order['status'] == 'completed'): ?>
                                                 <span class="badge bg-success">Completed</span>
                                             <?php else: ?>
                                                 <span class="badge bg-danger">Failed</span>

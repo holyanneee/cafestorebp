@@ -17,7 +17,7 @@ if (isset($_POST['update_order']) && isset($_POST['is_ajax'])) {
     $update_payment = filter_var($update_payment, FILTER_SANITIZE_STRING);
 
     // Update both payment status and cashier in the orders table
-    $update_orders = $conn->prepare("UPDATE `orders` SET payment_status = ?, barista = ? WHERE id = ?");
+    $update_orders = $conn->prepare("UPDATE `orders` SET status = ?, barista = ? WHERE id = ?");
     $update_orders->execute([$update_payment, $barista_name, $order_id]);
 
     http_response_code(204); // No Content
@@ -43,13 +43,13 @@ $select_orders = $conn->prepare("
         o.name,
         o.email,
         o.placed_on,
-        o.payment_status,
+        o.status,
         o.type,
         GROUP_CONCAT(op.product_id) AS product_ids,
         (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
     FROM `orders` o 
     LEFT JOIN `order_products` op ON o.id = op.order_id
-    WHERE o.payment_status = ? AND o.type = 'coffee'
+    WHERE o.status = ? AND o.type = 'coffee'
     GROUP BY o.id
 ");
 
@@ -65,7 +65,7 @@ foreach ($orders as $order) {
         'email' => htmlspecialchars($order['email']),
         'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
         'type' => htmlspecialchars($order['type']),
-        'payment_status' => htmlspecialchars($order['payment_status']),
+        'status' => htmlspecialchars($order['status']),
         'total_price' => number_format($order['total_price'], 2),
         'products' => array_filter(array_map(function ($product_id) use ($conn, $order) {
             // Fetch product details
@@ -338,10 +338,10 @@ $orders = $formatted_orders;
                         <?php if (!empty($orders)): ?>
                             <?php foreach ($orders as $order): ?>
                                 <?php
-                                $status_class = $order['payment_status'] == 'completed' ? 'status-completed' : 'status-pending';
+                                $status_class = $order['status'] == 'completed' ? 'status-completed' : 'status-pending';
                                 $order_date = date('M d, Y', strtotime($order['placed_on']));
                                 ?>
-                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['payment_status'] ?>"
+                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['status'] ?>"
                                     data-date="<?= date('Y-m-d', strtotime($order['placed_on'])) ?>">
                                     <td>#<?= $order['order_id'] ?></td>
                                     <td>
@@ -356,7 +356,7 @@ $orders = $formatted_orders;
                                     <td>₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?></td>
                                     <td>
                                         <span class="status-badge <?= $status_class ?>">
-                                            <?= ucfirst($order['payment_status']) ?>
+                                            <?= ucfirst($order['status']) ?>
                                         </span>
                                     </td>
                                     <td>
@@ -368,7 +368,7 @@ $orders = $formatted_orders;
                                         <?php include 'view_order_modal.php'; ?>
                                         <button class="action-btn btn-update" data-bs-toggle="modal"
                                             data-bs-target="#updateOrderModal" data-id="<?= $order['order_id'] ?>"
-                                            data-status="<?= $order['payment_status'] ?>">
+                                            data-status="<?= $order['status'] ?>">
                                             Update
                                         </button>
 

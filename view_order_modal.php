@@ -44,8 +44,7 @@
                         </div>
                         <div class="order-details mb-2">
                             <strong>Status:</strong>
-                            <span
-                                class="status-badge <?= $status_class ?>"><?= ucfirst($order['payment_status']) ?></span>
+                            <span class="status-badge <?= $status_class ?>"><?= ucfirst($order['status']) ?></span>
                         </div>
                     </div>
                 </div>

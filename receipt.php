@@ -21,7 +21,7 @@ $select_orders = $conn->prepare("
         o.name,
         o.email,
         o.placed_on,
-        o.payment_status,
+        o.status,
         o.type,
         o.method,
         o.address,
@@ -81,7 +81,7 @@ if (empty($order['receipt'])) {
             'add_ons' => $add_ons,
         ];
 
-    } 
+    }
 
     // var_dump($products_data); // Debugging line to check products data
     // Generate PDF
