@@ -1,4 +1,7 @@
 <?php
+require 'enums/OrderStatusEnum.php';
+use Enums\OrderStatusEnum;
+
 @include 'config.php';
 session_start();
 
@@ -8,30 +11,35 @@ if (!$admin_id) {
     header('location:login.php');
     exit();
 }
+
+
+
+$completedStatus = OrderStatusEnum::Completed;
+
 //default 
 // fetch earnings for the current month
 $month = date('m');
 $year = date('Y');
-$select_monthly_earnings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_monthly_earnings FROM order_products op JOIN orders o ON op.order_id = o.id WHERE MONTH(o.placed_on) = ? AND YEAR(o.placed_on) = ? AND o.status = 'completed'");
-$select_monthly_earnings->execute([$month, $year]);
+$select_monthly_earnings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_monthly_earnings FROM order_products op JOIN orders o ON op.order_id = o.id WHERE MONTH(o.placed_on) = ? AND YEAR(o.placed_on) = ? AND o.status = ?");
+$select_monthly_earnings->execute([$month, $year, $completedStatus->value]);
 $fetch_monthly_earnings = $select_monthly_earnings->fetch(PDO::FETCH_ASSOC);
 $total_monthly_earnings = $fetch_monthly_earnings['total_monthly_earnings'] ?? 0;
 
 // fetch earnings for the current year
-$select_annual_earnings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_annual_earnings FROM order_products op JOIN orders o ON op.order_id = o.id WHERE YEAR(o.placed_on) = ? AND o.status = 'completed'");
-$select_annual_earnings->execute([$year]);
+$select_annual_earnings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_annual_earnings FROM order_products op JOIN orders o ON op.order_id = o.id WHERE YEAR(o.placed_on) = ? AND o.status = ?");
+$select_annual_earnings->execute([$year, $completedStatus->value]);
 $fetch_annual_earnings = $select_annual_earnings->fetch(PDO::FETCH_ASSOC);
 $total_annual_earnings = $fetch_annual_earnings['total_annual_earnings'] ?? 0;
 
 // fetch total orders current month
-$select_monthly_orders = $conn->prepare("SELECT COUNT(*) AS total_monthly_orders FROM orders WHERE MONTH(placed_on) = ? AND YEAR(placed_on) = ? AND status = 'completed'");
-$select_monthly_orders->execute([$month, $year]);
+$select_monthly_orders = $conn->prepare("SELECT COUNT(*) AS total_monthly_orders FROM orders WHERE MONTH(placed_on) = ? AND YEAR(placed_on) = ? AND status = ?");
+$select_monthly_orders->execute([$month, $year, $completedStatus->value]);
 $fetch_monthly_orders = $select_monthly_orders->fetch(PDO::FETCH_ASSOC);
 $total_monthly_orders = $fetch_monthly_orders['total_monthly_orders'] ?? 0;
 
 // fetch total orders current year
-$select_annual_orders = $conn->prepare("SELECT COUNT(*) AS total_annual_orders FROM orders WHERE YEAR(placed_on) = ? AND status = 'completed'");
-$select_annual_orders->execute([$year]);
+$select_annual_orders = $conn->prepare("SELECT COUNT(*) AS total_annual_orders FROM orders WHERE YEAR(placed_on) = ? AND status = ?");
+$select_annual_orders->execute([$year, $completedStatus->value]);
 $fetch_annual_orders = $select_annual_orders->fetch(PDO::FETCH_ASSOC);
 $total_annual_orders = $fetch_annual_orders['total_annual_orders'] ?? 0;
 
@@ -47,13 +55,13 @@ $select_popular_products = $conn->prepare("
     FROM order_products op 
     JOIN products p ON op.product_id = p.id 
     JOIN orders o ON op.order_id = o.id
-    WHERE o.status = 'completed'
+    WHERE o.status = ?
     GROUP BY op.product_id 
     ORDER BY total_quantity DESC 
     LIMIT 5
 ");
 
-$select_popular_products->execute();
+$select_popular_products->execute([$completedStatus->value]);
 $popular_products = $select_popular_products->fetchAll(PDO::FETCH_ASSOC);
 
 $select_recent_order = $conn->prepare("

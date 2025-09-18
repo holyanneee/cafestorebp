@@ -2,6 +2,9 @@
 @include 'config.php';
 session_start();
 
+require_once 'enums/OrderStatusEnum.php';
+use enums\OrderStatusEnum;
+
 $admin_id = $_SESSION['admin_id'] ?? null;
 if (!$admin_id) {
     header('location:login.php');
@@ -22,7 +25,8 @@ if (isset($_POST['update_delivery'])) {
 
 // Fetch all deliveries with order information
 $select_deliveries = $conn->prepare("
-    SELECT d.*, o.name as customer_name, o.email, o.total_price, o.placed_on 
+    SELECT d.*, o.name as customer_name, o.email, o.placed_on, 
+           (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
     FROM `deliveries` d
     JOIN `orders` o ON d.order_id = o.id
 ");
@@ -244,12 +248,7 @@ $deliveries = $select_deliveries->fetchAll(PDO::FETCH_ASSOC);
             <div class="delivery-actions">
                 <select id="statusFilter">
                     <option value="">All Statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="otw">On The Way</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
+
                 </select>
                 <input type="text" id="searchInput" placeholder="Search deliveries...">
             </div>

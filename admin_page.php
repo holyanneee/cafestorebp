@@ -1,5 +1,7 @@
 <?php
 
+require_once 'enums/OrderStatusEnum.php';
+use Enums\OrderStatusEnum;
 @include 'config.php';
 
 session_start();
@@ -41,9 +43,12 @@ if (!isset($admin_id)) {
 
          <div class="box">
             <?php
+
+            $preparingStatus = OrderStatusEnum::Preparing;
+
             $total_pendings = 0;
             $select_pendings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_price FROM order_products op JOIN orders o ON op.order_id = o.id WHERE status = ?");
-            $select_pendings->execute(['pending']);
+            $select_pendings->execute([$preparingStatus->value]);
             $fetch_pendings = $select_pendings->fetch(PDO::FETCH_ASSOC);
             $total_pendings = $fetch_pendings['total_price'] ?? 0;
             ?>
@@ -54,9 +59,11 @@ if (!isset($admin_id)) {
 
          <div class="box">
             <?php
+            $completedStatus = OrderStatusEnum::Completed;
+
             $total_completed = 0;
             $select_completed = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_price FROM order_products op JOIN orders o ON op.order_id = o.id WHERE status = ?");
-            $select_completed->execute(['completed']);
+            $select_completed->execute([$completedStatus->value]);
             $fetch_completed = $select_completed->fetch(PDO::FETCH_ASSOC);
             $total_completed = $fetch_completed['total_price'] ?? 0;
             ?>

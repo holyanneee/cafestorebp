@@ -125,15 +125,20 @@
                   <a href="logout.php" class="delete-btn">Logout</a>
                </div>
                <?php
-               //Fetch notifications from the database
-               $select_notifications = $conn->prepare("SELECT * FROM ingredients WHERE unit IN ('grams', 'pieces')");
-               $select_notifications->execute();
-               $fetch_notifications = $select_notifications->fetchAll(PDO::FETCH_ASSOC);
+
+               $select_ingredients = $conn->prepare("SELECT * FROM ingredients WHERE unit IN ('grams', 'pieces')");
+               $select_ingredients->execute();
+               $fetch_ingredients = $select_ingredients->fetchAll(PDO::FETCH_ASSOC);
+
+                  $select_products = $conn->prepare("SELECT * FROM products WHERE stock < 5 AND type = 'online'");
+               $select_products->execute();
+               $fetch_products = $select_products->fetchAll(PDO::FETCH_ASSOC);
+
                ?>
                <div id="notification-btn" class="fas fa-bell"></div>
                <?php
                $low_stock_count = 0;
-               foreach ($fetch_notifications as $notification) {
+               foreach ($fetch_ingredients as $notification) {
                   if (
                      ($notification['unit'] == 'grams' && $notification['stock'] < 500) ||
                      ($notification['unit'] == 'pieces' && $notification['stock'] < 5)
@@ -141,14 +146,15 @@
                      $low_stock_count++;
                   }
                }
+               $low_stock_count = count($fetch_products) + $low_stock_count;
                if ($low_stock_count > 0) {
-                  echo '<span class="notification-count">' . $low_stock_count . '</span>';
+                  echo "<span class=\"notification-count\">{$low_stock_count}</span>";
                }
                ?>
                <div class="notifications">
                   <h3>Notifications</h3>
                   <ul>
-                     <?php foreach ($fetch_notifications as $notification): ?>
+                     <?php foreach ($fetch_ingredients as $notification): ?>
                         <?php
 
                         if ($notification['unit'] == 'grams' && $notification['stock'] < 500) {
@@ -167,7 +173,7 @@
 
 
                      <?php endforeach; ?>
-                     <?php if (empty($fetch_notifications)): ?>
+                     <?php if (empty($fetch_ingredients)): ?>
                         <li>No new notifications.</li>
                      <?php endif; ?>
                   </ul>
@@ -182,7 +188,7 @@
 
 
       <script src="js/admin_profile.js"></script>
-     
+
    </body>
 
 </html>

@@ -1,6 +1,8 @@
 <?php
 @include 'config.php';
 session_start();
+require 'enums/OrderStatusEnum.php';
+use Enums\OrderStatusEnum;
 
 $admin_id = $_SESSION['admin_id'] ?? null;
 if (!$admin_id) {
@@ -317,12 +319,16 @@ $orders = $formatted_orders;
 
         <div class="filter-section">
             <div class="filter-container">
+                <?php
+                    
+                    $statuses = OrderStatusEnum::cases();
+                ?>
                 <label class="me-2 fw-bold" style="font-size: 12px;">Order Filters</label>
                 <select class="form-select form-select-sm" style="width: 140px;" id="statusFilter">
                     <option value="all" selected>All Statuses</option>
-                    <option value="completed">Completed</option>
-                    <option value="On Queue">On Queue</option>
-                    <option value="On Going">On Going</option>
+                    <?php foreach ($statuses as $status): ?>
+                        <option value="<?= $status->value ?>"><?= $status->label() ?></option>
+                    <?php endforeach; ?>
                 </select>
                 <select class="form-select form-select-sm" style="width: 140px;" id="typeFilter">
                     <option value="all" selected>All Types</option>
@@ -425,10 +431,11 @@ $orders = $formatted_orders;
                     <input type="hidden" name="is_ajax" value="1">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="updatePaymentStatus" class="form-label">Payment Status</label>
-                            <select class="form-select form-select-sm" name="update_payment" id="updatePaymentStatus">
-                                <option value="pending">Pending</option>
-                                <option value="completed">Completed</option>
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select form-select-sm" name="status" id="status">
+                                <?php foreach ($statuses as $status): ?>
+                                    <option value="<?= $status->value ?>"><?= $status->label() ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                     </div>
@@ -470,7 +477,7 @@ $orders = $formatted_orders;
                 const currentStatus = this.getAttribute('data-status');
 
                 document.getElementById('updateOrderId').value = orderId;
-                document.getElementById('updatePaymentStatus').value = currentStatus;
+                document.getElementById('status').value = currentStatus;
             });
         });
 

@@ -33,14 +33,7 @@
       </div>
 
       <!-- Order Management -->
-      <div class="dropdown menu-section">
-         <a href="#" class="dropdown-btn"><i class="fas fa-shopping-cart"></i> Orders</a>
-         <div class="dropdown-content">
-            <a href="admin_orders.php"><i class="fas fa-boxes"></i> All Orders</a>
-            <a href="admin_products.php"><i class="fas fa-truck"></i> Delivery Management</a>
-            <a href="admin_takeaway.php"><i class="fas fa-store"></i> Takeaway & Dine-in Orders</a>
-         </div>
-      </div>
+      <a href="admin_orders.php"><i class="fas fa-shopping-cart"></i> Orders</a>
 
       <!-- User Management -->
       <div class="dropdown menu-section">
