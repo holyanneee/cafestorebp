@@ -1,9 +1,15 @@
 <?php
 @include 'config.php';
 session_start();
+require_once 'enums/OrderStatusEnum.php';
+require_once 'helpers/FormatHelper.php';
 
+use Helpers\FormatHelper;
+use Enums\OrderStatusEnum;
+
+$preparingStatus = OrderStatusEnum::Preparing;
 $admin_id = $_SESSION['barista_id'] ?? null;
-$cashier_name = $_SESSION['barista_name'] ?? 'Unknown'; // Fetch the cashier's name
+$barista = $_SESSION['barista_name'] ?? 'Unknown'; // Fetch the cashier's name
 if (!$admin_id) {
     header('location:login.php');
     exit();
@@ -11,9 +17,22 @@ if (!$admin_id) {
 
 if (isset($_GET['order_id'])) {
     $order_id = $_GET['order_id'];
-    $update_payment = 'completed'; // Set the payment status to completed
-    $update_orders = $conn->prepare("UPDATE `orders` SET status = ?, cashier = ? WHERE id = ?");
-    $update_orders->execute([$update_payment, $cashier_name, $order_id]);
+    $status = OrderStatusEnum::OnTheWay->value;
+    // get the order 
+    $select_order = $conn->prepare("SELECT * FROM `orders` WHERE id = ?");
+    $select_order->execute([$order_id]);
+    $order = $select_order->fetch(PDO::FETCH_ASSOC);
+    if (!$order) {
+        // Order not found, redirect back with an error message
+        header('location:barista_ongoing_order.php');
+        exit();
+    }
+    if ($order['is_walk_in']) {
+        $status = OrderStatusEnum::Completed->value;
+    }
+
+    $update_orders = $conn->prepare("UPDATE `orders` SET status = ?, updated_by_barista = ? WHERE id = ?");
+    $update_orders->execute([$status, $barista, $order_id]);
 
     // deduct the stock of products in order_products
     $select_order_products = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ?");
@@ -54,7 +73,7 @@ if (isset($_GET['order_id'])) {
 
 
     // Redirect to the same page to avoid resubmission
-    header('location:barista_ongoing_order.php');
+    header('location:barista_orders.php');
     exit();
 }
 
@@ -69,8 +88,8 @@ if (isset($_POST['update_order'])) {
     $update_payment = filter_var($update_payment, FILTER_SANITIZE_STRING);
 
     // Update both payment status and cashier in the orders table
-    $update_orders = $conn->prepare("UPDATE `orders` SET status = ?, cashier = ? WHERE id = ?");
-    $update_orders->execute([$update_payment, $cashier_name, $order_id]);
+    $update_orders = $conn->prepare("UPDATE `orders` SET status = ?, updated_by_cashier = ? WHERE id = ?");
+    $update_orders->execute([$update_payment, $barista, $order_id]);
 
     header('location:cashier_online_orders.php');
     exit();
@@ -96,69 +115,15 @@ $select_orders = $conn->prepare("
         (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
     FROM `orders` o 
     LEFT JOIN `order_products` op ON o.id = op.order_id
-    WHERE o.status = ?  AND o.barista = ?  AND o.type = 'coffee'
+    WHERE o.status = ?   AND o.type = 'coffee'
     GROUP BY o.id
 ");
 
-$select_orders->execute(['on Going', $cashier_name]);
+$select_orders->execute([$preparingStatus->value]);
 $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
 
-// format the orders
-$formatted_orders = [];
-foreach ($orders as $order) {
-    $formatted_orders[] = [
-        'order_id' => $order['order_id'],
-        'name' => htmlspecialchars($order['name']),
-        'email' => htmlspecialchars($order['email']),
-        'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
-        'type' => htmlspecialchars($order['type']),
-        'status' => htmlspecialchars($order['status']),
-        'total_price' => number_format($order['total_price'], 2),
-        'products' => array_filter(array_map(function ($product_id) use ($conn, $order) {
-            // Fetch product details
-            $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
-            $select_product->execute([$product_id]);
-            $product = $select_product->fetch(PDO::FETCH_ASSOC);
-            // Check if product exists
-            if (!$product) {
-                return null; // Skip if product not found
-            }
 
-            // get the quntity and subtotal from order_products
-            $select_order_product = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ? AND product_id = ?");
-            $select_order_product->execute([$order['order_id'], $product_id]);
-            $order_product = $select_order_product->fetch(PDO::FETCH_ASSOC);
-            if (!$order_product) {
-                return null; // Skip if order product not found
-            }
-            $product['quantity'] = $order_product['quantity'];
-            $product['subtotal'] = $order_product['subtotal'];
-
-            return [
-                'id' => $product['id'],
-                'name' => htmlspecialchars($product['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-                'quantity' => htmlspecialchars($product['quantity'] ?? '0', ENT_QUOTES, 'UTF-8'),
-                'price' => number_format($product['price'] ?? 0, 2),
-                'subtotal' => number_format($product['subtotal'] ?? 0, 2),
-                'cup_sizes' => json_decode($order_product['cup_sizes'] ?? '[]', true) ?: [],
-                'ingredients' => array_map(function ($ingredient) {
-                    return [
-                        'name' => htmlspecialchars($ingredient['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-                        'level' => htmlspecialchars($ingredient['level'] ?? '', ENT_QUOTES, 'UTF-8')
-                    ];
-                }, json_decode($order_product['ingredients'] ?? '[]', true) ?: []),
-                'add_ons' => array_map(function ($addOn) {
-                    return [
-                        'name' => htmlspecialchars($addOn['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-                        'price' => number_format($addOn['price'] ?? 0, 2)
-                    ];
-                }, json_decode($order_product['add_ons'] ?? '[]', true) ?: []),
-            ];
-        }, explode(',', $order['product_ids'])))
-    ];
-}
-
-$orders = $formatted_orders;
+$orders = FormatHelper::formatOrders($orders, $conn);
 
 
 
@@ -389,7 +354,7 @@ $orders = $formatted_orders;
                                 $status_class = $order['status'] == 'completed' ? 'status-completed' : 'status-pending';
                                 $order_date = date('M d, Y', strtotime($order['placed_on']));
                                 ?>
-                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['status'] ?>"
+                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['status']['value'] ?>"
                                     data-date="<?= date('Y-m-d', strtotime($order['placed_on'])) ?>">
                                     <td>#<?= $order['order_id'] ?></td>
                                     <td>
@@ -403,8 +368,8 @@ $orders = $formatted_orders;
                                     <td><?= $order_date ?></td>
                                     <td>₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?></td>
                                     <td>
-                                        <span class="status-badge <?= $status_class ?>">
-                                            <?= ucfirst($order['status']) ?>
+                                         <span class="status-badge" style="background-color: <?= $order['status']['color'] ?>; color: white;">
+                                            <?= $order['status']['label'] ?>
                                         </span>
                                     </td>
                                     <td>

@@ -25,7 +25,8 @@ $select_orders = $conn->prepare("
         o.type,
         o.method,
         o.address,
-        o.cashier,
+        o.updated_by_cashier,
+        o.updated_by_barista,
         o.number,
         o.receipt,
         GROUP_CONCAT(op.product_id) AS product_ids,
@@ -91,7 +92,12 @@ if (empty($order['receipt'])) {
     $pdf->SetMargins(5, 5, 5);
 
     $pdf->SetFont('Arial', 'B', 12);
-    $pdf->Cell(0, 5, 'Kape Milagrosa', 0, 1, 'C');
+    if ($order['type'] == 'coffee') {
+        $pdf->Cell(0, 5, 'Kape Milagrosa', 0, 1, 'C');
+    }else{
+        $pdf->Cell(0, 5, 'Anak ng Birhen', 0, 1, 'C');
+
+    }
     $pdf->SetFont('Arial', '', 9);
     $pdf->Cell(0, 4, 'Purok 3, 0356 Chico St, Calauan, 4012 Laguna', 0, 1, 'C');
     $pdf->Cell(0, 4, 'Phone: 09058774385', 0, 1, 'C');
@@ -127,7 +133,7 @@ if (empty($order['receipt'])) {
             $pdf->Cell(0, 4, "  Add-ons:", 0, 1);
             foreach ($product['add_ons'] as $addon) {
                 $priceFormatted = number_format($addon['price'], 2);
-                $pdf->Cell(0, 4, "    {$addon['name']} (+{$priceFormatted})", 0, 1);
+                $pdf->Cell(0, 4, "   {$addon['name']} (+{$priceFormatted})", 0, 1);
             }
             $pdf->SetFont('Courier', '', 9);
         }

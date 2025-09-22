@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: May 28, 2025 at 08:43 AM
+-- Generation Time: Sep 22, 2025 at 02:49 PM
 -- Server version: 8.0.30
 -- PHP Version: 8.2.27
 
@@ -73,12 +73,12 @@ CREATE TABLE `ingredients` (
 --
 
 INSERT INTO `ingredients` (`id`, `name`, `stock`, `unit`, `status`, `is_consumable`) VALUES
-(1, 'Sugar', 267, 'grams', 'active', 1),
-(2, 'Ice', 267, 'grams', 'active', 1),
-(3, 'Cup Large', 297, 'pieces', 'active', 0),
-(4, 'Cup Regular', 300, 'pieces', 'active', 0),
-(5, 'Frappe', 282, 'grams', 'active', 1),
-(6, 'Cup Small', 297, 'pieces', 'active', 0);
+(1, 'Sugar', 247, 'grams', 'active', 1),
+(2, 'Ice', 247, 'grams', 'active', 1),
+(3, 'Cup Large', 285, 'pieces', 'active', 0),
+(4, 'Cup Regular', 297, 'pieces', 'active', 0),
+(5, 'Frappe', 277, 'grams', 'active', 1),
+(6, 'Cup Small', 292, 'pieces', 'active', 0);
 
 -- --------------------------------------------------------
 
@@ -109,11 +109,12 @@ CREATE TABLE `orders` (
   `email` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
   `method` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
   `address` varchar(500) COLLATE utf8mb4_general_ci NOT NULL,
-  `status` varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'on Queue',
-  `cashier` text COLLATE utf8mb4_general_ci,
+  `status` enum('pending','received','preparing','pick-up','on the way','completed') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pending',
+  `updated_by_cashier` text COLLATE utf8mb4_general_ci,
+  `updated_by_barista` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `receipt` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `barista` text COLLATE utf8mb4_general_ci,
   `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee',
+  `is_walk_in` tinyint(1) NOT NULL DEFAULT '0',
   `placed_on` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -123,8 +124,10 @@ CREATE TABLE `orders` (
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `user_id`, `name`, `number`, `email`, `method`, `address`, `status`, `cashier`, `receipt`, `barista`, `type`, `placed_on`, `created_at`, `updated_at`) VALUES
-(11, 42, 'Melinda Downs', '09512323111', 'muwybave@mailinator.com', 'Cash on Delivery', 'qweqwe', 'on Queue', NULL, NULL, NULL, 'coffee', '2025-05-28 08:05:42', '2025-05-28 08:05:42', '2025-05-28 08:05:42');
+INSERT INTO `orders` (`id`, `user_id`, `name`, `number`, `email`, `method`, `address`, `status`, `updated_by_cashier`, `updated_by_barista`, `receipt`, `type`, `is_walk_in`, `placed_on`, `created_at`, `updated_at`) VALUES
+(1, 42, 'Melinda Downs', '09512370553', 'muwybave@mailinator.com', 'Cash on Delivery', 'Lamot 2 Calauan, Laguna\r\nLamot 2 Calauan, Laguna', 'completed', 'admin1', '', 'receipt_38_20250922_144149_68d1602d943b1.pdf', 'online', 0, '2025-09-22 14:41:49', '2025-09-21 13:06:56', '2025-09-22 14:41:49'),
+(2, 38, 'Walk-in Customer', '', '', 'cash', 'N/A', 'completed', 'code and u', 'code and u', 'receipt_38_20250922_143600_68d15ed0a7cfe.pdf', 'coffee', 1, '2025-09-22 14:36:00', '2025-09-21 15:32:19', '2025-09-22 14:36:00'),
+(3, 38, 'Walk-in Customer', '', '', 'cash', 'N/A', 'completed', 'admin1', 'code and u', '', 'coffee', 1, '2025-09-22 13:25:15', '2025-09-22 12:46:09', '2025-09-22 13:25:15');
 
 -- --------------------------------------------------------
 
@@ -151,8 +154,11 @@ CREATE TABLE `order_products` (
 --
 
 INSERT INTO `order_products` (`id`, `order_id`, `product_id`, `quantity`, `price`, `subtotal`, `ingredients`, `cup_sizes`, `add_ons`, `created_at`, `updated_at`) VALUES
-(21, 11, 40, 10, '100.00', '1200.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"}}', '{\"size\":\"Large\",\"price\":20}', '[{\"id\":\"45\",\"name\":\"Tapioca Pearls\",\"price\":20}]', '2025-05-28 08:05:42', '2025-05-28 08:05:42'),
-(22, 11, 38, 3, '250.00', '765.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"Extra\"}}', '{\"size\":\"Regular\",\"price\":5}', '[{\"id\":\"45\",\"name\":\"Tapioca Pearls\",\"price\":20}]', '2025-05-28 08:05:42', '2025-05-28 08:05:42');
+(1, 1, 48, 1, '200.00', '200.00', NULL, NULL, NULL, '2025-09-21 13:06:56', '2025-09-21 13:06:56'),
+(2, 1, 47, 1, '150.00', '150.00', NULL, NULL, NULL, '2025-09-21 13:06:56', '2025-09-21 13:06:56'),
+(3, 2, 40, 1, '100.00', '140.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Extra\"}}', '{\"size\":\"Large\",\"price\":20}', '[{\"id\":\"45\",\"name\":\"\\n                           Tapioca Pearls\",\"price\":20}]', '2025-09-21 15:32:19', '2025-09-21 15:32:19'),
+(4, 2, 38, 1, '250.00', '272.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Extra\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"Regular\"}}', '{\"size\":\"Small\",\"price\":2}', '[{\"id\":\"45\",\"name\":\"\\n                           Tapioca Pearls\",\"price\":20}]', '2025-09-21 15:32:19', '2025-09-21 15:32:19'),
+(5, 3, 40, 1, '100.00', '125.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"}}', '{\"size\":\"Small\",\"price\":5}', '[{\"id\":\"45\",\"name\":\"\\n                           Tapioca Pearls\",\"price\":20}]', '2025-09-22 12:46:09', '2025-09-22 12:46:09');
 
 -- --------------------------------------------------------
 
@@ -170,6 +176,7 @@ CREATE TABLE `products` (
   `stock` int DEFAULT '0',
   `image` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
   `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee',
+  `is_featured` tinyint(1) NOT NULL DEFAULT '0',
   `ingredients` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
   `cup_sizes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin
 ) ;
@@ -178,17 +185,17 @@ CREATE TABLE `products` (
 -- Dumping data for table `products`
 --
 
-INSERT INTO `products` (`id`, `name`, `category`, `details`, `price`, `status`, `stock`, `image`, `type`, `ingredients`, `cup_sizes`) VALUES
-(24, 'yana', 'Frappe', 'sdasdsd', 100, 'active', 0, 'prod_1745145022.jpg', 'coffee', '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
-(30, 'yeye', 'Frappe Extreme', 'sweet', 89, 'active', 0, 'prod_1745071708.jpg', 'coffee', '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
-(37, 'Cafe Frappe', 'Frappe', 'idk', 100, 'active', 0, 'prod_1746071881.jpg', 'coffee', '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
-(38, 'Frappe 2', 'Frappe', 'asd', 250, 'active', 0, 'prod_1746071904.jpg', 'coffee', '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
-(39, 'frappuchino', 'Frappe', 'frappe ng mga Chinese', 300, 'active', 0, 'prod_1746071952.jpg', 'coffee', '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
-(40, 'Brusko', 'Espresso', 'N-word Coffee', 100, 'active', 0, 'prod_1746098396.jpg', 'coffee', '[1, 2]', '{\"large\": 20, \"small\": 5}'),
-(45, 'Tapioca Pearls', 'Add-ons', 'extra', 20, 'active', 0, 'prod_1748083606.jpg', 'coffee', NULL, '[]'),
-(46, 'Chibi Religious Item', 'Chibi Religious Item', 'adsad', 100, 'active', 23, 'prod_1748193066.jpg', 'online', NULL, NULL),
-(47, 'Baby Jesus', 'Statues', 'asda', 150, 'active', 20, 'prod_1748193098.jpg', 'online', NULL, NULL),
-(48, 'Rosary', 'Rosary', 'wdas', 200, 'active', 23, 'prod_1748193118.jpg', 'online', NULL, NULL);
+INSERT INTO `products` (`id`, `name`, `category`, `details`, `price`, `status`, `stock`, `image`, `type`, `is_featured`, `ingredients`, `cup_sizes`) VALUES
+(24, 'yana', 'Frappe', 'sdasdsd', 100, 'active', 0, 'prod_1745145022.jpg', 'coffee', 0, '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
+(30, 'yeye', 'Frappe Extreme', 'sweet', 89, 'active', 0, 'prod_1745071708.jpg', 'coffee', 0, '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
+(37, 'Cafe Frappe', 'Frappe', 'idk', 100, 'active', 0, 'prod_1746071881.jpg', 'coffee', 0, '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
+(38, 'Frappe 2', 'Frappe', 'asd', 250, 'active', 0, 'prod_1746071904.jpg', 'coffee', 0, '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
+(39, 'frappuchino', 'Frappe', 'frappe ng mga Chinese', 300, 'active', 0, 'prod_1746071952.jpg', 'coffee', 0, '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
+(40, 'Brusko', 'Espresso', 'N-word Coffee', 100, 'active', 0, 'prod_1746098396.jpg', 'coffee', 0, '[1, 2]', '{\"large\": 20, \"small\": 5}'),
+(45, 'Tapioca Pearls', 'Add-ons', 'extra', 20, 'active', 0, 'prod_1748083606.jpg', 'coffee', 0, NULL, '[]'),
+(46, 'Chibi Religious Item', 'Chibi Religious Item', 'adsad', 100, 'active', 23, 'prod_1748193066.jpg', 'online', 0, NULL, NULL),
+(47, 'Baby Jesus', 'Statues', 'asda', 150, 'active', 20, 'prod_1748193098.jpg', 'online', 0, NULL, NULL),
+(48, 'Rosary', 'Rosary', 'wdas', 200, 'active', 23, 'prod_1748193118.jpg', 'online', 0, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -302,7 +309,7 @@ ALTER TABLE `wishlist`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=107;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `deliveries`
@@ -326,7 +333,7 @@ ALTER TABLE `message`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `order_products`
@@ -350,7 +357,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `wishlist`
 --
 ALTER TABLE `wishlist`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- Constraints for dumped tables

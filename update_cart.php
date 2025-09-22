@@ -83,6 +83,7 @@ try {
                 WHERE cart.user_id = ? AND cart.type = ?");
             $stmt->execute([$user_id, $type]);
             $cartItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo $cartItems;
 
             if (count($cartItems) === 0) {
                 echo json_encode(['success' => false, 'message' => 'Cart is empty']);
@@ -91,8 +92,8 @@ try {
 
             // Insert into orders
             $stmt = $conn->prepare("INSERT INTO orders 
-                (user_id, name, number, email, method, address, status, type) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                (user_id, name, number, email, method, address, type) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $user_id,
                 $name,
@@ -100,7 +101,6 @@ try {
                 $email,
                 $method,
                 $address,
-                'On Queue',
                 $type
             ]);
             $orderId = $conn->lastInsertId();

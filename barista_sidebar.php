@@ -17,7 +17,7 @@
       <div class="dropdown menu-section">
          <a href="#" class="dropdown-btn"><i class="fas fa-shopping-cart"></i> Orders</a>
          <div class="dropdown-content">
-            <a href="barista_orders.php"><i class="fas fa-boxes"></i> All Orders</a>
+            <a href="barista_orders.php"><i class="fas fa-boxes"></i> Completed Orders</a>
             <a href="barista_ongoing_order.php"><i class="fas fa-truck"></i> Ongoing Orders</a>
             <a href="barista_take_order.php"><i class="fas fa-store"></i> Take Order</a>
          </div>

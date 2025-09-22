@@ -4,6 +4,9 @@
 
 session_start();
 
+
+require_once 'enums/OrderStatusEnum.php';
+use Enums\OrderStatusEnum;
 $admin_id = $_SESSION['cashier_id'];
 
 if (!isset($admin_id)) {
@@ -41,13 +44,13 @@ if (!isset($admin_id)) {
 
          <div class="box">
             <?php
+            $pendingStatus = OrderStatusEnum::Pending;
+
             $total_pendings = 0;
             $select_pendings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_price FROM order_products op JOIN orders o ON op.order_id = o.id WHERE status = ?");
-            $select_pendings->execute(['pending']);
-            while ($fetch_pendings = $select_pendings->fetch(PDO::FETCH_ASSOC)) {
-               $total_pendings += $fetch_pendings['total_price'];
-            }
-            ;
+            $select_pendings->execute([$pendingStatus->value]);
+            $fetch_pendings = $select_pendings->fetch(PDO::FETCH_ASSOC);
+            $total_pendings = $fetch_pendings['total_price'] ?? 0;
             ?>
             <h3>₱<?= $total_pendings; ?></h3>
             <p>total pendings</p>

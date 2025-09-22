@@ -1,8 +1,10 @@
 <?php
 @include 'config.php';
 session_start();
+require_once 'helpers\FormatHelper.php';
 require 'enums/OrderStatusEnum.php';
 use Enums\OrderStatusEnum;
+use Helpers\FormatHelper;
 
 $admin_id = $_SESSION['admin_id'] ?? null;
 if (!$admin_id) {
@@ -68,62 +70,7 @@ $select_orders = $conn->prepare("
 $select_orders->execute();
 $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
 
-// format the orders
-$formatted_orders = [];
-foreach ($orders as $order) {
-    $formatted_orders[] = [
-        'order_id' => $order['order_id'],
-        'name' => htmlspecialchars($order['name']),
-        'email' => htmlspecialchars($order['email']),
-        'type' => htmlspecialchars($order['type']),
-        'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
-        'status' => htmlspecialchars($order['status']),
-        'total_price' => number_format($order['total_price'], 2),
-        'products' => array_filter(array_map(function ($product_id) use ($conn, $order) {
-            // Fetch product details
-            $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
-            $select_product->execute([$product_id]);
-            $product = $select_product->fetch(PDO::FETCH_ASSOC);
-            // Check if product exists
-            if (!$product) {
-                return null; // Skip if product not found
-            }
-
-            // get the quntity and subtotal from order_products
-            $select_order_product = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ? AND product_id = ?");
-            $select_order_product->execute([$order['order_id'], $product_id]);
-            $order_product = $select_order_product->fetch(PDO::FETCH_ASSOC);
-            if (!$order_product) {
-                return null; // Skip if order product not found
-            }
-            $product['quantity'] = $order_product['quantity'];
-            $product['subtotal'] = $order_product['subtotal'];
-
-            return [
-                'id' => $product['id'],
-                'name' => htmlspecialchars($product['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-                'quantity' => htmlspecialchars($product['quantity'] ?? '0', ENT_QUOTES, 'UTF-8'),
-                'price' => number_format($product['price'] ?? 0, 2),
-                'subtotal' => number_format($product['subtotal'] ?? 0, 2),
-                'cup_sizes' => json_decode($order_product['cup_sizes'] ?? '[]', true) ?: [],
-                'ingredients' => array_map(function ($ingredient) {
-                    return [
-                        'name' => htmlspecialchars($ingredient['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-                        'level' => htmlspecialchars($ingredient['level'] ?? '', ENT_QUOTES, 'UTF-8')
-                    ];
-                }, json_decode($order_product['ingredients'] ?? '[]', true) ?: []),
-                'add_ons' => array_map(function ($addOn) {
-                    return [
-                        'name' => htmlspecialchars($addOn['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-                        'price' => number_format($addOn['price'] ?? 0, 2)
-                    ];
-                }, json_decode($order_product['add_ons'] ?? '[]', true) ?: []),
-            ];
-        }, explode(',', $order['product_ids'])))
-    ];
-}
-
-$orders = $formatted_orders;
+$orders = FormatHelper::formatOrders($orders, $conn);
 
 ?>
 
@@ -320,8 +267,8 @@ $orders = $formatted_orders;
         <div class="filter-section">
             <div class="filter-container">
                 <?php
-                    
-                    $statuses = OrderStatusEnum::cases();
+
+                $statuses = OrderStatusEnum::cases();
                 ?>
                 <label class="me-2 fw-bold" style="font-size: 12px;">Order Filters</label>
                 <select class="form-select form-select-sm" style="width: 140px;" id="statusFilter">
@@ -361,7 +308,7 @@ $orders = $formatted_orders;
                                 $status_class = $order['status'] == 'completed' ? 'status-completed' : 'status-pending';
                                 $order_date = date('M d, Y', strtotime($order['placed_on']));
                                 ?>
-                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['status'] ?>"
+                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['status']['value'] ?>"
                                     data-date="<?= date('Y-m-d', strtotime($order['placed_on'])) ?>"
                                     data-type="<?= $order['type'] ?>">
                                     <td>#<?= $order['order_id'] ?></td>
@@ -376,8 +323,9 @@ $orders = $formatted_orders;
                                     <td><?= $order_date ?></td>
                                     <td>₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?></td>
                                     <td>
-                                        <span class="status-badge <?= $status_class ?>">
-                                            <?= ucfirst($order['status']) ?>
+                                        <span class="status-badge"
+                                            style="background-color: <?= $order['status']['color'] ?>; color: white;">
+                                            <?= $order['status']['label'] ?>
                                         </span>
                                     </td>
                                     <td>
@@ -389,7 +337,7 @@ $orders = $formatted_orders;
                                         <?php include 'view_order_modal.php'; ?>
                                         <button class="action-btn btn-update" data-bs-toggle="modal"
                                             data-bs-target="#updateOrderModal" data-id="<?= $order['order_id'] ?>"
-                                            data-status="<?= $order['status'] ?>">
+                                            data-status="<?= $order['status']['value'] ?>">
                                             Update
                                         </button>
                                         <a href="admin_orders.php?delete=<?= $order['order_id'] ?>"

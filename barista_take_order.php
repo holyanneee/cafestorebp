@@ -2,6 +2,12 @@
 @include 'config.php';
 session_start();
 
+require_once 'enums/OrderStatusEnum.php';
+require_once 'helpers/FormatHelper.php';
+
+use Helpers\FormatHelper;
+use Enums\OrderStatusEnum;
+
 $admin_id = $_SESSION['barista_id'] ?? null;
 $barista_name = $_SESSION['barista_name'] ?? 'Unknown'; // Fetch the cashier's name
 if (!$admin_id) {
@@ -9,19 +15,24 @@ if (!$admin_id) {
     exit();
 }
 
+$pendingStatus = OrderStatusEnum::Pending;
 
-// Handle AJAX update (silent version)
-if (isset($_POST['update_order']) && isset($_POST['is_ajax'])) {
-    $order_id = $_POST['order_id'];
-    $update_payment = $_POST['update_payment'];
-    $update_payment = filter_var($update_payment, FILTER_SANITIZE_STRING);
+if (isset($_GET['id'])) {
+    $order_id = $_GET['id'];
+    $select_orders = $conn->prepare("SELECT * FROM `orders` WHERE id = ?");
+    $select_orders->execute([$order_id]);
+    if ($select_orders->rowCount() > 0) {
+        $order = $select_orders->fetch(PDO::FETCH_ASSOC);
 
-    // Update both payment status and cashier in the orders table
-    $update_orders = $conn->prepare("UPDATE `orders` SET status = ?, barista = ? WHERE id = ?");
-    $update_orders->execute([$update_payment, $barista_name, $order_id]);
+        // update order status to Preparing
+        $update_status = $conn->prepare("UPDATE `orders` SET status = ? WHERE id = ?");
+        $update_status->execute([OrderStatusEnum::Preparing->value, $order_id]);
+        header('location:barista_ongoing_order.php');
+    } else {
+        $order = null;
+    }
 
-    http_response_code(204); // No Content
-    header('location:barista_order_taken.php');
+
     exit();
 }
 
@@ -53,65 +64,11 @@ $select_orders = $conn->prepare("
     GROUP BY o.id
 ");
 
-$select_orders->execute(['On Queue']);
+$select_orders->execute([$pendingStatus->value]);
 $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
 
-// format the orders
-$formatted_orders = [];
-foreach ($orders as $order) {
-    $formatted_orders[] = [
-        'order_id' => $order['order_id'],
-        'name' => htmlspecialchars($order['name']),
-        'email' => htmlspecialchars($order['email']),
-        'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
-        'type' => htmlspecialchars($order['type']),
-        'status' => htmlspecialchars($order['status']),
-        'total_price' => number_format($order['total_price'], 2),
-        'products' => array_filter(array_map(function ($product_id) use ($conn, $order) {
-            // Fetch product details
-            $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
-            $select_product->execute([$product_id]);
-            $product = $select_product->fetch(PDO::FETCH_ASSOC);
-            // Check if product exists
-            if (!$product) {
-                return null; // Skip if product not found
-            }
 
-            // get the quntity and subtotal from order_products
-            $select_order_product = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ? AND product_id = ?");
-            $select_order_product->execute([$order['order_id'], $product_id]);
-            $order_product = $select_order_product->fetch(PDO::FETCH_ASSOC);
-            if (!$order_product) {
-                return null; // Skip if order product not found
-            }
-            $product['quantity'] = $order_product['quantity'];
-            $product['subtotal'] = $order_product['subtotal'];
-
-            return [
-                'id' => $product['id'],
-                'name' => htmlspecialchars($product['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-                'quantity' => htmlspecialchars($product['quantity'] ?? '0', ENT_QUOTES, 'UTF-8'),
-                'price' => number_format($product['price'] ?? 0, 2),
-                'subtotal' => number_format($product['subtotal'] ?? 0, 2),
-                'cup_sizes' => json_decode($order_product['cup_sizes'] ?? '[]', true) ?: [],
-                'ingredients' => array_map(function ($ingredient) {
-                    return [
-                        'name' => htmlspecialchars($ingredient['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-                        'level' => htmlspecialchars($ingredient['level'] ?? '', ENT_QUOTES, 'UTF-8')
-                    ];
-                }, json_decode($order_product['ingredients'] ?? '[]', true) ?: []),
-                'add_ons' => array_map(function ($addOn) {
-                    return [
-                        'name' => htmlspecialchars($addOn['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-                        'price' => number_format($addOn['price'] ?? 0, 2)
-                    ];
-                }, json_decode($order_product['add_ons'] ?? '[]', true) ?: []),
-            ];
-        }, explode(',', $order['product_ids'])))
-    ];
-}
-
-$orders = $formatted_orders;
+$orders = FormatHelper::formatOrders($orders, $conn);
 
 
 ?>
@@ -341,7 +298,7 @@ $orders = $formatted_orders;
                                 $status_class = $order['status'] == 'completed' ? 'status-completed' : 'status-pending';
                                 $order_date = date('M d, Y', strtotime($order['placed_on']));
                                 ?>
-                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['status'] ?>"
+                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['status']['value'] ?>"
                                     data-date="<?= date('Y-m-d', strtotime($order['placed_on'])) ?>">
                                     <td>#<?= $order['order_id'] ?></td>
                                     <td>
@@ -355,8 +312,9 @@ $orders = $formatted_orders;
                                     <td><?= $order_date ?></td>
                                     <td>₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?></td>
                                     <td>
-                                        <span class="status-badge <?= $status_class ?>">
-                                            <?= ucfirst($order['status']) ?>
+                                        <span class="status-badge"
+                                            style="background-color: <?= $order['status']['color'] ?>; color: white;">
+                                            <?= $order['status']['label'] ?>
                                         </span>
                                     </td>
                                     <td>
@@ -366,11 +324,10 @@ $orders = $formatted_orders;
                                         </button>
                                         <!-- modal -->
                                         <?php include 'view_order_modal.php'; ?>
-                                        <button class="action-btn btn-update" data-bs-toggle="modal"
-                                            data-bs-target="#updateOrderModal" data-id="<?= $order['order_id'] ?>"
-                                            data-status="<?= $order['status'] ?>">
-                                            Update
-                                        </button>
+                                        <a class="action-btn btn-update"
+                                            href="barista_take_order.php?id=<?= $order['order_id'] ?>">
+                                            Accept Order
+                                        </a>
 
                                     </td>
                                 </tr>
@@ -387,50 +344,6 @@ $orders = $formatted_orders;
 
         <div class="pagination-info">
             Showing <?= !empty($orders) ? '1-' . count($orders) : '0' ?> of <?= count($orders) ?> orders
-        </div>
-    </div>
-
-    <!-- Update Order Modal -->
-    <div class="modal fade" id="updateOrderModal" tabindex="-1" aria-labelledby="updateOrderModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="updateOrderModalLabel">Update Order Status</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
-                </div>
-                <form method="POST" id="updateOrderForm">
-                    <input type="hidden" name="order_id" id="updateOrderId">
-                    <input type="hidden" name="is_ajax" value="1">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="updatePaymentStatus" class="form-label">Payment Status</label>
-                            <select class="form-select form-select-sm" name="update_payment" id="updatePaymentStatus">
-                                <option value="On Going">Take Order</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" name="update_order" class="btn btn-primary btn-sm">Update Status</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Notification -->
-    <div class="toast-container">
-        <div id="updateToast" class="toast align-items-center text-white bg-success" role="alert" aria-live="assertive"
-            aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    Order status updated successfully!
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
-                    aria-label="Close"></button>
-            </div>
         </div>
     </div>
 

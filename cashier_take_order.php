@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_data'])) {
    }
 
    // process the order 
-   $insert = $conn->prepare("INSERT INTO orders (user_id, name, number, email, method, address, placed_on, cashier, receipt, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+   $insert = $conn->prepare("INSERT INTO orders (user_id, name, number, email, method, address, placed_on, updated_by_cashier, receipt, is_walk_in) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
    $insert->execute([
       $admin_id,
       'Walk-in Customer',
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_data'])) {
       $placed_on,
       $cashier_name,
       '',
-      'On Queue'
+      true
    ]);
 
    // Get the last inserted order ID

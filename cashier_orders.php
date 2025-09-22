@@ -1,6 +1,15 @@
 <?php
+
 @include 'config.php';
 session_start();
+
+require_once 'enums/OrderStatusEnum.php';
+require_once 'helpers/FormatHelper.php';
+
+use Helpers\FormatHelper;
+use Enums\OrderStatusEnum;
+
+$preparingStatus = OrderStatusEnum::Preparing;
 
 $admin_id = $_SESSION['cashier_id'] ?? null;
 if (!$admin_id) {
@@ -10,48 +19,42 @@ if (!$admin_id) {
 
 // Handle AJAX update
 if (isset($_POST['update_order']) && isset($_POST['is_ajax'])) {
-    $order_id = $_POST['order_id'];
-    $update_payment = filter_var($_POST['update_payment'], FILTER_SANITIZE_STRING);
+    $order_id = filter_var($_POST['order_id'], FILTER_VALIDATE_INT);
+    $update_payment = filter_var($_POST['update_payment'], FILTER_SANITIZE_SPECIAL_CHARS);
+
+    if (!$order_id || !$update_payment) {
+        error_log("Invalid input for order update.");
+        http_response_code(400); // Bad Request
+        exit();
+    }
 
     // Fetch current status
     $stmt = $conn->prepare("SELECT status FROM `orders` WHERE id = ?");
     $stmt->execute([$order_id]);
     $current_order = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($current_order && $current_order['status'] === 'On Queue' && $update_payment === 'completed') {
+    if ($current_order && $current_order['status'] === $preparingStatus->value && $update_payment === 'completed') {
         header('location:cashier_order_error.php');
         exit();
     }
 
-    $update_orders = $conn->prepare("UPDATE `orders` SET status = ? WHERE id = ?");
-    $update_orders->execute([$update_payment, $order_id]);
+    try {
+        $update_orders = $conn->prepare("UPDATE `orders` SET status = ? WHERE id = ?");
+        $update_orders->execute([$update_payment, $order_id]);
+        http_response_code(200); // OK
 
-    http_response_code(204); // No Content
-    header('location:cashier_order_updated.php');
-    exit();
-}
+        header('location:cashier_orders.php');
+        exit();
 
-// Handle regular form submission
-if (isset($_POST['update_order'])) {
-    $order_id = $_POST['order_id'];
-    $update_payment = filter_var($_POST['update_payment'], FILTER_SANITIZE_STRING);
-
-    // Fetch current status
-    $stmt = $conn->prepare("SELECT status FROM `orders` WHERE id = ?");
-    $stmt->execute([$order_id]);
-    $current_order = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($current_order && $current_order['status'] === 'On Queue' && $update_payment === 'completed') {
-        header('location:cashier_order_error.php');
+    } catch (PDOException $e) {
+        error_log("Error updating order status: " . $e->getMessage());
+        http_response_code(500); // Internal Server Error
+        echo json_encode(['success' => false, 'message' => 'Failed to update order.']);
         exit();
     }
-
-    $update_orders = $conn->prepare("UPDATE `orders` SET status = ? WHERE id = ?");
-    $update_orders->execute([$update_payment, $order_id]);
-
-    header('location:cashier_orders.php');
-    exit();
 }
+
+
 
 if (isset($_GET['delete'])) {
     $delete_id = $_GET['delete'];
@@ -86,66 +89,9 @@ if ($cashier_name) {
     $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
 
     // format the orders
-    $formatted_orders = [];
-    foreach ($orders as $order) {
-        $formatted_orders[] = [
-            'order_id' => $order['order_id'],
-            'name' => htmlspecialchars($order['name']),
-            'email' => htmlspecialchars($order['email']),
-            'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
-            'type' => htmlspecialchars($order['type']),
-            'status' => htmlspecialchars($order['status']),
-            'total_price' => number_format((int) $order['total_price'], 2),
-            'products' => array_filter(array_map(function ($product_id) use ($conn, $order) {
-                // Fetch product details
-                $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
-                $select_product->execute([$product_id]);
-                $product = $select_product->fetch(PDO::FETCH_ASSOC);
-                // Check if product exists
-                if (!$product) {
-                    return null; // Skip if product not found
-                }
 
-                // Get the quantity and subtotal from order_products
-                $select_order_product = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ? AND product_id = ?");
-                $select_order_product->execute([$order['order_id'], $product_id]);
-                $order_product = $select_order_product->fetch(PDO::FETCH_ASSOC);
-                if (!$order_product) {
-                    return null; // Skip if order product not found
-                }
-                $product['quantity'] = $order_product['quantity'];
-                $product['subtotal'] = $order_product['subtotal'];
 
-                return [
-                    'id' => $product['id'],
-                    'name' => htmlspecialchars($product['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-                    'quantity' => htmlspecialchars($product['quantity'] ?? '0', ENT_QUOTES, 'UTF-8'),
-                    'price' => number_format($product['price'] ?? 0, 2),
-                    'subtotal' => number_format($product['subtotal'] ?? 0, 2),
-                    'cup_sizes' => json_decode($order_product['cup_sizes'] ?? '[]', true) ?: [],
-                    'ingredients' => array_map(function ($ingredient) {
-                        return [
-                            'name' => htmlspecialchars($ingredient['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-                            'level' => htmlspecialchars($ingredient['level'] ?? '', ENT_QUOTES, 'UTF-8')
-                        ];
-                    }, json_decode($order_product['ingredients'] ?? '[]', true) ?: []),
-                    'add_ons' => array_map(function ($addOn) {
-                        return [
-                            'name' => htmlspecialchars($addOn['name'] ?? '', ENT_QUOTES, 'UTF-8'),
-                            'price' => number_format($addOn['price'] ?? 0, 2)
-                        ];
-                    }, json_decode($order_product['add_ons'] ?? '[]', true) ?: []),
-                ];
-            }, explode(',', $order['product_ids'])))
-        ];
-
-        // Sort products by order_id
-        usort($formatted_orders, function ($a, $b) {
-            return $a['order_id'] <=> $b['order_id'];
-        });
-    }
-
-    $orders = $formatted_orders;
+    $orders = FormatHelper::formatOrders($orders, $conn);
 
 } else {
     // Optional: handle case where cashier name is not set in session
@@ -160,9 +106,9 @@ if ($cashier_name) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> Manage Orders</title>
+    <title> All Orders</title>
     <!-- font awesome cdn link  -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <!-- custom css file link  -->
@@ -342,7 +288,7 @@ if ($cashier_name) {
 
     <div class="admin-container">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="mb-0" style="font-size: 18px;">Manage Orders</h2>
+            <h2 class="mb-0" style="font-size: 18px;">All Orders</h2>
         </div>
 
         <div class="filter-section">
@@ -370,9 +316,7 @@ if ($cashier_name) {
                     <tbody>
                         <?php
                         // Sort the orders by id in descending order
-                        usort($orders, function ($a, $b) {
-                            return $b['order_id'] - $a['order_id'];
-                        });
+                        usort($orders, fn($a, $b) => $b['order_id'] - $a['order_id']);
                         ?>
 
                         <?php if (!empty($orders)): ?>
@@ -381,7 +325,7 @@ if ($cashier_name) {
                                 $status_class = $order['status'] == 'completed' ? 'status-completed' : 'status-pending';
                                 $order_date = date('M d, Y', strtotime($order['placed_on']));
                                 ?>
-                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['status'] ?>"
+                                <tr data-id="<?= $order['order_id'] ?>" data-status="<?= $order['status']['value'] ?>"
                                     data-date="<?= date('Y-m-d', strtotime($order['placed_on'])) ?>">
                                     <td>#<?= $order['order_id'] ?></td>
                                     <td>
@@ -395,12 +339,12 @@ if ($cashier_name) {
                                     <td><?= $order_date ?></td>
                                     <td>₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?></td>
                                     <td>
-                                        <span class="status-badge <?= $status_class ?>">
-                                            <?= ucfirst($order['status']) ?>
+                                        <span class="status-badge" style="background-color: <?= $order['status']['color'] ?>; color: white;">
+                                            <?= $order['status']['label'] ?>
                                         </span>
                                     </td>
                                     <td>
-                                        <?php if ($order['status'] === 'completed'): ?>
+                                        <?php if ($order['status']['value'] === 'completed'): ?>
                                             <button class="action-btn btn-view" data-bs-toggle="modal"
                                                 data-bs-target="#viewOrderModal-<?= $order['order_id'] ?>">
                                                 View
@@ -416,8 +360,8 @@ if ($cashier_name) {
                                                 View
                                             </button>
                                             <button class="action-btn btn-update" data-bs-toggle="modal"
-                                                data-bs-target="#updateOrderModal" data-id="<?= $order['order_id'] ?>"
-                                                data-status="<?= $order['status'] ?>">
+                                                data-bs-target="#updateOrderModal-<?= $order['order_id'] ?>"
+                                                data-id="<?= $order['order_id'] ?>" data-status="<?= $order['status']['value'] ?>">
                                                 Update
                                             </button>
                                             <a href="cashier_orders.php?delete=<?= $order['order_id'] ?>"
@@ -426,6 +370,46 @@ if ($cashier_name) {
                                                 Delete
                                             </a>
                                         <?php endif; ?>
+                                        <div class="modal fade" id="updateOrderModal-<?= $order['order_id'] ?>" tabindex="-1"
+                                            aria-labelledby="updateOrderModalLabel-<?= $order['order_id'] ?>"
+                                            aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title"
+                                                            id="updateOrderModalLabel-<?= $order['order_id'] ?>">Update Order
+                                                            Status
+                                                        </h5>
+                                                        <button type="button" class="btn-close btn-close-white"
+                                                            data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <form method="POST" id="updateOrderForm-<?= $order['order_id'] ?>">
+                                                        <input type="hidden" name="order_id" value="<?= $order['order_id'] ?>">
+                                                        <input type="hidden" name="is_ajax" value="1">
+                                                        <div class="modal-body">
+                                                            <div class="mb-3">
+                                                                <label for="updatePaymentStatus-<?= $order['order_id'] ?>"
+                                                                    class="form-label">Payment
+                                                                    Status</label>
+                                                                <select class="form-select form-select-sm" name="update_payment"
+                                                                    id="updatePaymentStatus-<?= $order['order_id'] ?>">
+                                                                    <?php foreach (OrderStatusEnum::cases() as $status): ?>
+                                                                        <option value="<?= $status->value ?>"
+                                                                            <?= $order['status']['value'] == $status->value ? 'selected' : '' ?>><?= $status->label() ?></option>
+                                                                    <?php endforeach; ?>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary btn-sm"
+                                                                data-bs-dismiss="modal">Cancel</button>
+                                                            <button type="submit" name="update_order"
+                                                                class="btn btn-primary btn-sm">Update Status</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
                                         <?php include 'view_order_modal.php'; ?>
                                     </td>
                                 </tr>
@@ -449,35 +433,7 @@ if ($cashier_name) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Update Order Modal -->
-    <div class="modal fade" id="updateOrderModal" tabindex="-1" aria-labelledby="updateOrderModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="updateOrderModalLabel">Update Order Status</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
-                </div>
-                <form method="POST" id="updateOrderForm">
-                    <input type="hidden" name="order_id" id="updateOrderId">
-                    <input type="hidden" name="is_ajax" value="1">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="updatePaymentStatus" class="form-label">Payment Status</label>
-                            <select class="form-select form-select-sm" name="update_payment" id="updatePaymentStatus">
-                                <option value="pending">Pending</option>
-                                <option value="completed">Completed</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" name="update_order" class="btn btn-primary btn-sm">Update Status</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Toast Notification -->
     <div class="toast-container">
@@ -494,7 +450,15 @@ if ($cashier_name) {
     </div>
 
     <script>
-        console.log(<?= json_encode($orders) ?>);
+        // // check if the bootstrap JavaScript is working
+        // if (typeof bootstrap !== 'undefined') {
+        //     console.log('Bootstrap JavaScript is loaded and working.');
+        // } else {
+        //     console.log('Bootstrap JavaScript is not loaded.');
+        // }
+        // console.log('JavaScript is running');
+        // // For debugging: print orders data to console
+        // console.log(<?= json_encode($orders) ?>);
         // Initialize components
         const updateToast = new bootstrap.Toast(document.getElementById('updateToast'));
         const viewOrderModal = document.getElementById('viewOrderModal');
@@ -502,26 +466,27 @@ if ($cashier_name) {
         // View Order Modal - Load data when shown
         viewOrderModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
-            const orderId = button.getAttribute('data-order-id');
+            if (viewOrderModal) {
+                viewOrderModal.addEventListener('show.bs.modal', function (event) {
 
-            // Find the order in the table data
-            const orderRow = document.querySelector(`tr[data-id="${orderId}"]`);
-            if (orderRow) {
-                const orderData = {
-                    id: orderId,
-                    name: orderRow.querySelector('.fw-semibold').textContent,
-                    email: orderRow.querySelector('.text-muted').textContent,
-                    date: orderRow.cells[2].textContent,
-                    total: orderRow.cells[3].textContent,
-                    status: orderRow.querySelector('.status-badge').textContent.trim(),
-                    // Add more fields as needed
-                };
+                    // Find the order in the table data
+                    const orderRow = document.querySelector(`tr[data-id="${orderId}"]`);
+                    if (orderRow) {
+                        const orderData = {
+                            id: orderId,
+                            name: orderRow.querySelector('.fw-semibold').textContent,
+                            email: orderRow.querySelector('.text-muted').textContent,
+                            date: orderRow.cells[2].textContent,
+                            total: orderRow.cells[3].textContent,
+                            status: orderRow.querySelector('.status-badge').textContent.trim(),
+                            // Add more fields as needed
+                        };
 
-                // Update modal title with order ID
-                document.getElementById('modalOrderId').textContent = orderId;
+                        // Update modal title with order ID
+                        document.getElementById('modalOrderId').textContent = orderId;
 
-                // Build and display order details
-                const detailsHTML = `
+                        // Build and display order details
+                        const detailsHTML = `
                     <div class="row">
                         <div class="col-md-6">
                             <div class="order-details mb-2">
@@ -551,7 +516,9 @@ if ($cashier_name) {
                     </div>
                 `;
 
-                document.getElementById('orderDetailsContent').innerHTML = detailsHTML;
+                        document.getElementById('orderDetailsContent').innerHTML = detailsHTML;
+                    }
+                });
             }
         });
 

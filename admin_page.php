@@ -44,11 +44,11 @@ if (!isset($admin_id)) {
          <div class="box">
             <?php
 
-            $preparingStatus = OrderStatusEnum::Preparing;
+            $pendingStatus = OrderStatusEnum::Pending;
 
             $total_pendings = 0;
             $select_pendings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_price FROM order_products op JOIN orders o ON op.order_id = o.id WHERE status = ?");
-            $select_pendings->execute([$preparingStatus->value]);
+            $select_pendings->execute([$pendingStatus->value]);
             $fetch_pendings = $select_pendings->fetch(PDO::FETCH_ASSOC);
             $total_pendings = $fetch_pendings['total_price'] ?? 0;
             ?>
