@@ -13,146 +13,78 @@ session_start();
    <meta charset="UTF-8">
    <meta http-equiv="X-UA-Compatible" content="IE=edge">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>About | Kape Milagrosa
+   </title>
+   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 
-   <title>About</title>
-
-   <!-- font awesome cdn link  -->
-   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-
-   <!-- custom css file link  -->
-   <link rel="stylesheet" href="css/style.css">
-
+   <link rel="stylesheet" href="css/new_style.css">
 </head>
 
-<body style="display: flex; flex-direction: column; min-height: 100vh;">
+<body>
 
    <?php include 'header.php'; ?>
 
-   <main style="flex: 1;" class="about">
+   <main>
+      <section class="mt-20">
+         <section>
+            <div class="mx-auto max-w-screen-xl px-4 py-8 sm:px-6 lg:px-8">
+               <div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-center md:gap-8">
+                  <div>
+                     <div class="max-w-prose md:max-w-none">
+                        <h2 class="text-2xl font-semibold text-gray-900 sm:text-3xl">
+                           Kape Milagrosa
+                        </h2>
 
-      <div class="row" style="margin-top: 50px">
+                        <p class="mt-4 text-gray-700">
+                           Hot & Iced Coffee, Milk Tea, Fruit Tea, Fruit Milk, Fruit Soda, Frappe, Pastries, and more!
+                        </p>
+                     </div>
+                  </div>
 
-         <div class="box">
-            <img src="images/kape_milag.jpg" alt="">
-            <h3>why choose us?</h3>
-            <p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Quisquam, a quod, quis alias eius dignissimos
-               pariatur laborum dolorem ad ullam iure, consequatur autem animi illo odit! Atque quia minima
-               voluptatibus.</p>
-            <a href="contact.php" class="btn">contact us</a>
-         </div>
+                  <div>
+                     <img
+                        src="https://images.unsplash.com/photo-1731690415686-e68f78e2b5bd?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                        class="rounded" alt="" />
+                  </div>
+               </div>
+            </div>
 
-         <div class="box">
-            <img src="images/birhen.jpg" alt="">
-            <h3>what we provide?</h3>
-            <p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Quisquam, a quod, quis alias eius dignissimos
-               pariatur laborum dolorem ad ullam iure, consequatur autem animi illo odit! Atque quia minima
-               voluptatibus.</p>
-            <a href="shop.php" class="btn">our shop</a>
-         </div>
-      </div>
+            <div class="mx-auto max-w-screen-xl px-4 py-8 sm:px-6 lg:px-8">
+               <div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-center md:gap-8">
+                  <div>
+                     <div class="max-w-prose md:max-w-none">
+                        <h2 class="text-2xl font-semibold text-gray-900 sm:text-3xl">
+                           Lorem ipsum dolor sit amet consectetur adipisicing elit.
+                        </h2>
+
+                        <p class="mt-4 text-gray-700">
+                           Lorem ipsum dolor sit amet consectetur adipisicing elit. Tenetur doloremque saepe
+                           architecto maiores repudiandae amet perferendis repellendus, reprehenderit voluptas
+                           sequi.
+                        </p>
+                     </div>
+                  </div>
+
+                  <div>
+                     <img
+                        src="https://images.unsplash.com/photo-1731690415686-e68f78e2b5bd?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                        class="rounded" alt="" />
+                  </div>
+               </div>
+            </div>
+
+
+
+         </section>
+
+      </section>
+
 
    </main>
-   <!--
-<section class="reviews">
-
-   <h1 class="title">clients reivews</h1>
-
-   <div class="box-container">
-
-      <div class="box">
-         <img src="images/pic-1.png" alt="">
-         <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Et voluptates sit earum, neque non cupiditate amet deserunt aperiam quas ex.</p>
-         <div class="stars">
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star-half-alt"></i>
-         </div>
-         <h3>john deo</h3>
-      </div>
-
-      <div class="box">
-         <img src="images/pic-2.png" alt="">
-         <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Et voluptates sit earum, neque non cupiditate amet deserunt aperiam quas ex.</p>
-         <div class="stars">
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star-half-alt"></i>
-         </div>
-         <h3>john deo</h3>
-      </div>
-
-      <div class="box">
-         <img src="images/pic-3.png" alt="">
-         <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Et voluptates sit earum, neque non cupiditate amet deserunt aperiam quas ex.</p>
-         <div class="stars">
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star-half-alt"></i>
-         </div>
-         <h3>john deo</h3>
-      </div>
-
-      <div class="box">
-         <img src="images/pic-4.png" alt="">
-         <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Et voluptates sit earum, neque non cupiditate amet deserunt aperiam quas ex.</p>
-         <div class="stars">
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star-half-alt"></i>
-         </div>
-         <h3>john deo</h3>
-      </div>
-
-      <div class="box">
-         <img src="images/pic-5.png" alt="">
-         <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Et voluptates sit earum, neque non cupiditate amet deserunt aperiam quas ex.</p>
-         <div class="stars">
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star-half-alt"></i>
-         </div>
-         <h3>john deo</h3>
-      </div>
-
-      <div class="box">
-         <img src="images/pic-6.png" alt="">
-         <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Et voluptates sit earum, neque non cupiditate amet deserunt aperiam quas ex.</p>
-         <div class="stars">
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star"></i>
-            <i class="fas fa-star-half-alt"></i>
-         </div>
-         <h3>john deo</h3>
-      </div>
-
-   </div>
-
-</section> -->
-
-
-
-
-
-
-
-
 
    <?php include 'footer.php'; ?>
 
-   <script src="js/script.js"></script>
-
+   <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
 </body>
 
 </html>

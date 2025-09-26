@@ -1,288 +1,366 @@
 <?php
-ob_start(); // Must be the very first line — starts output buffering
+ob_start(); // Start output buffering to prevent premature output
+
+require_once 'enums/OrderStatusEnum.php';
+
+use enums\OrderStatusEnum;
+
+$completedStatus = OrderStatusEnum::Completed;
 
 // Start session only if not already started
 if (session_status() === PHP_SESSION_NONE) {
-   session_start();
-}
-
-// Default store selection if not set
-if (!isset($_SESSION['store'])) {
-   $_SESSION['store'] = 'kape_milagrosa';
-   header("Location: index.php");
-   exit(); // Always exit after redirect
+  session_start();
 }
 
 
-// Store display names and logos
-$store_data = [
-   'kape_milagrosa' => [
-      'name' => 'Kape Milagrosa',
-      'logo' => 'images/kape_milag.jpg'
-   ],
-   'anak_ng_birhen' => [
-      'name' => 'Anak ng Birhen',
-      'logo' => 'images/anak_milag.png'
-   ]
-];
 
-$current_store = $_SESSION['store'];
-$current_store = $current_store ?? ''; // fallback if not set
-$type = ($current_store === 'kape_milagrosa') ? 'coffee' : 'online';
+// get user id
+$user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
 
-$type = strtolower(trim($type)); // sanitize again
+// set type based on store code
+$type = 'coffee';
 
-$user_id = $_SESSION['user_id'] ?? null; // Use null coalescing operator for safety
-if (!isset($user_id) && (isset($_GET['product_id']) || isset($_GET['action']))) {
-   unset($_GET['product_id']);
-   unset($_GET['action']);
-   header('location:login.php');
-   exit();
-}
+$category = $_GET['category'] ?? '';
+$query = "SELECT * FROM `products` WHERE `status` = 'active' AND `type` = ? AND `category` != 'Add-ons' ORDER BY id DESC LIMIT 6";
+$params = [$type];
 
-if (isset($user_id)) {
-   if (isset($_GET['action']) && $_GET['action'] === 'add_to_wishlist' && isset($_GET['product_id'])) {
-      $prouct_id = $_GET['product_id'];
-      $prouct_id = filter_var($prouct_id, FILTER_SANITIZE_SPECIAL_CHARS);
-
-      $check_favourite_numbers = $conn->prepare("SELECT * FROM `wishlist` WHERE product_id = ? AND user_id = ? AND type = ?");
-      $check_favourite_numbers->execute([$prouct_id, $user_id, $type]);
-      if ($check_favourite_numbers->rowCount() > 0) {
-         $messag = 'already added to wishlist!';
-      } else {
-         $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
-         $select_product->execute([$prouct_id]);
-         if ($select_product->rowCount() > 0) {
-            $fetch_product = $select_product->fetch(PDO::FETCH_ASSOC);
-            $insert_wishlist = $conn->prepare("INSERT INTO `wishlist`(user_id, product_id ,type) VALUES(?,?,?)");
-            $insert_wishlist->execute([$user_id, $prouct_id, $type]);
-            $messag = 'added to wishlist!';
-         } else {
-            $messag = 'product not found!';
-         }
-      }
-      unset($_GET['fav_product_id']);
-   }
-   
-   
-   if (isset($_GET['action']) && $_GET['action'] === 'add_to_cart' && isset($_GET['product_id'])) {
-      
-      $product_id = $_GET['product_id'];
-   
-      $check_cart_numbers = $conn->prepare("SELECT * FROM `cart` WHERE product_id = ? AND user_id = ? AND type = ?");
-      $check_cart_numbers->execute([$product_id, $user_id, $type]);
-   
-      if ($check_cart_numbers->rowCount() > 0) {
-         // update quantity and subtotal
-         $update_cart = $conn->prepare("UPDATE `cart` SET quantity = quantity + 1 WHERE product_id = ? AND user_id = ? AND type = ?");
-         $update_cart->execute([$product_id, $user_id, $type]);
-
-         // Fetch the updated cart item to get the new subtotal
-         $select_cart = $conn->prepare("SELECT * FROM `cart` WHERE product_id = ? AND user_id = ? AND type = ?");
-         $select_cart->execute([$product_id, $user_id, $type]);
-         $cart_item = $select_cart->fetch(PDO::FETCH_ASSOC);
-         $subtotal = $cart_item['subtotal'] *  $cart_item['quantity'];
-         $update_cart_subtotal = $conn->prepare("UPDATE `cart` SET subtotal = ? WHERE product_id = ? AND user_id = ? AND type = ?");
-         $update_cart_subtotal->execute([$subtotal, $product_id, $user_id, $type]);
-
-         $messag = 'quantity updated in cart!';
-      } else {
-         $check_wishlist_numbers = $conn->prepare("SELECT * FROM `wishlist` WHERE product_id = ? AND user_id = ? AND type = ?");
-         $check_wishlist_numbers->execute([$product_id, $user_id, $type]);
-
-         if ($check_wishlist_numbers->rowCount() > 0) {
-            $delete_wishlist = $conn->prepare("DELETE FROM `wishlist` WHERE product_id = ? AND user_id = ? AND type = ?");
-            $delete_wishlist->execute([$product_id, $user_id, $type]);
-         }
-         //Fetch the ingredients for product
-         $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
-         $select_product->execute([$product_id]);
-         $product = $select_product->fetch(PDO::FETCH_ASSOC);
-   
-         if ($type == 'coffee') {
-            // fetch the ingredients
-            $ingredients = [];
-            foreach (json_decode($product['ingredients']) as $ingredient_id) {
-               $product_ingredients = $conn->prepare("SELECT * FROM `ingredients` WHERE id = ?");
-               $product_ingredients->execute([$ingredient_id]);
-               while ($ingredient = $product_ingredients->fetch(PDO::FETCH_ASSOC)) {
-                  $ingredients[$ingredient['id']] = [
-                     'name' => $ingredient['name'],
-                     'level' => 'Regular'
-                  ];
-               }
-            }
-
-            // cup_size(json column)
-            $cup_size = 'Small';
-
-            $cup_sizes = json_decode($product['cup_sizes'], true); // Decode JSON to array
-            if (isset($cup_sizes['regular'])) {
-               $cup_size = 'Regular';
-            }
-            $cup_price = $cup_sizes[strtolower($cup_size)] ?? 0; // Use null coalescing operator for safety
-
-
-            $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, product_id, quantity, ingredients, cup_size, subtotal, type) VALUES(?, ?, 1, ?, ?, ?, 'coffee')");
-            $insert_cart->execute([
-               $user_id,
-               $product_id,
-               json_encode($ingredients),
-               json_encode([
-                  'size' => $cup_size,
-                  'price' => $cup_price
-               ]),
-               ($product['price'] + $cup_price) * 1
-            ]);
-         } else {
-            $insert_cart = $conn->prepare("INSERT INTO `cart`(user_id, product_id,subtotal, quantity, type) VALUES(?, ?, ?, 1, 'online')");
-            $insert_cart->execute([$user_id, $product_id, $subtotal = $product['price'] * 1]);
-         }
-         $message = 'added to cart!';
-      }
-      unset($_GET['cart_product_id']);
-   }
-
-   $count_cart_items = $conn->prepare("SELECT * FROM `cart` WHERE user_id = ? AND type = ?");
-   $count_cart_items->execute([$user_id, $type]);
-   $count_wishlist_items = $conn->prepare("SELECT * FROM `wishlist` WHERE user_id = ? AND type = ?");
-   $count_wishlist_items->execute([$user_id, $type]);
-   $count_orders_items = $conn->prepare("SELECT * FROM `orders` WHERE user_id = ? AND type = ?");
-   $count_orders_items->execute([$user_id, $type]);
-
-   $select_profile = $conn->prepare("SELECT * FROM `users` WHERE id = ?");
-   $select_profile->execute([$user_id]);
-   $fetch_profile = $select_profile->fetch(PDO::FETCH_ASSOC);
-}
-$category = '';
-if (isset($_GET['category'])) {
-   $category = $_GET['category'];
-}
-
-$select_products = $conn->prepare("SELECT * FROM `products` WHERE `status` = 'active' AND `type` = ? AND `category` != 'Add-ons' ORDER BY id DESC LIMIT 6");
-$select_products->execute([$type]);
-$products = $select_products->fetchAll(PDO::FETCH_ASSOC);
 if (!empty($category)) {
-   $select_products = $conn->prepare("SELECT * FROM `products` WHERE `status` = 'active' AND `type` = ? AND `category` = ? ORDER BY id DESC LIMIT 6");
-   $select_products->execute([$type, $category]);
-   $products = $select_products->fetchAll(PDO::FETCH_ASSOC);
+  $query = "SELECT * FROM `products` WHERE `status` = 'active' AND `type` = ? AND `category` = ? ORDER BY id DESC LIMIT 6";
+  $params[] = $category;
 }
+
+$select_products = $conn->prepare($query);
+$select_products->execute($params);
+$products = $select_products->fetchAll(PDO::FETCH_ASSOC);
+
+$limit = 8;
+
+// get popular products this week
+$select_popular = $conn->prepare("
+    SELECT 
+        op.product_id, 
+        p.name AS product_name, 
+        p.image AS product_image,
+        p.price,
+        SUM(op.quantity) AS total_quantity
+    FROM order_products op 
+    JOIN products p ON op.product_id = p.id 
+    JOIN orders o ON op.order_id = o.id
+    WHERE o.status = ?
+      AND p.type = ?
+      AND o.placed_on >= NOW() - INTERVAL 7 DAY
+    GROUP BY op.product_id, p.name, p.image, p.price
+    ORDER BY total_quantity DESC 
+    LIMIT 
+" . $limit);
+
+// assuming $completedStatus->value is the first param, and $type is second
+$select_popular->execute([$completedStatus->value, $type]);
+
+$popular_products = $select_popular->fetchAll(PDO::FETCH_ASSOC);
+
+// if there's no popular products this week, get random products
+if (count($popular_products) === 0) {
+  $select_random = $conn->prepare("
+      SELECT 
+          id AS product_id,
+          name AS product_name,
+          image AS product_image,
+          price
+      FROM `products` 
+      WHERE `status` = 'active' 
+        AND `type` = ? 
+        AND `category` != 'Add-ons'
+      ORDER BY RAND() 
+      LIMIT 
+  " . $limit);
+
+  $select_random->execute([$type]);
+  $popular_products = $select_random->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// if the popular products are less than $limit, fill the rest with random products
+if (count($popular_products) < $limit) {
+  $needed = 5 - count($popular_products);
+  $existing_ids = array_column($popular_products, 'product_id');
+
+  $query = "
+      SELECT 
+          id AS product_id,
+          name AS product_name,
+          image AS product_image,
+          price
+      FROM `products` 
+      WHERE `status` = 'active' 
+        AND `type` = ? 
+        AND `category` != 'Add-ons'
+  ";
+
+  $params = [$type];
+
+  if (!empty($existing_ids)) {
+    $placeholders = implode(',', array_fill(0, count($existing_ids), '?'));
+    $query .= " AND id NOT IN ($placeholders)";
+    $params = array_merge($params, $existing_ids);
+  }
+
+  // ✅ inject LIMIT safely
+  $query .= " ORDER BY RAND() LIMIT $needed";
+
+  $select_additional = $conn->prepare($query);
+  $select_additional->execute($params);
+  $additional_products = $select_additional->fetchAll(PDO::FETCH_ASSOC);
+
+  $popular_products = array_merge($popular_products, $additional_products);
+}
+
+// get user info and 
+if ($user_id) {
+  $select_user = $conn->prepare("SELECT * FROM `users` WHERE id = ?");
+  $select_user->execute([$user_id]);
+  $user = $select_user->fetch(PDO::FETCH_ASSOC);
+}
+
+// check the url if not on index.php
+$current_page = basename($_SERVER['PHP_SELF']);
+
+
+ob_end_flush(); // Flush the output buffer and turn off output buffering
 
 ?>
 
-<style>
-   .logo-container {
-      display: flex;
-      align-items: center;
-      text-decoration: none;
-   }
+<header class="absolute inset-x-0 top-0 z-50 <?= $current_page != 'index.php' ? 'bg-color' : '' ?>">
+  <nav aria-label="Global" class="flex items-center justify-between px-2 py-3 lg:px-15">
+    <div class="flex lg:flex-1">
+      <a href="#" class="-m-1.5 p-1.5">
+        <span class="sr-only"><?= $current_store['name'] ?></span>
+        <img src="<?= $current_store['logo'] ?>" alt="" class="h-10 w-auto rounded-full" />
+      </a>
+    </div>
+    <div class="flex lg:hidden">
+      <button type="button" command="show-modal" commandfor="mobile-menu"
+        class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-200">
+        <span class="sr-only">Open main menu</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon"
+          aria-hidden="true" class="size-6">
+          <path d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+    </div>
+    <div class="hidden lg:flex lg:gap-x-12 nav">
+      <a href="index.php" class="text-sm/6 font-semibold text-white">Home</a>
+      <a href="products.php" class="text-sm/6 font-semibold text-white">Products</a>
 
-   .store-name {
-      font-size: 1.5rem;
-      font-weight: bold;
-      margin-left: 10px;
-      color: #333;
-      /* Adjust color */
-   }
+      <a href="about.php" class="text-sm/6 font-semibold text-white">About Us</a>
+      <a href="#contact-us" class="text-sm/6 font-semibold text-white">Contact Us</a>
+    </div>
+    <div class="hidden lg:flex lg:flex-1 lg:justify-end">
+      <?php if ($user_id && $user): ?>
+        <div class="flex items-center gap-4">
+          <a href="wishlist.php" class="text-sm/6 font-semibold text-white relative">
+            <span class="sr-only">Wishlist</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon"
+              aria-hidden="true" class="size-6">
+              <path
+                d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
+                stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <!-- You can add a badge for number of items in wishlist if needed -->
+          </a>
+          <a href="cart.php" class="text-sm/6 font-semibold text-white relative">
+            <span class="sr-only">Cart</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon"
+              aria-hidden="true" class="size-6">
+              <path d="M2.25 2.25h1.386c.51 0 .955.343 1.087.835l1.513 6.435M7.5 14.25a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm10.5 0a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM7.5 14.25h10.5m-10.5 0L6.16 5.59m11.34 8.66L19.5 6M6.16 5.59l-.31-1.
+91a1.125 1.125 0 0 0-1.087-.835H3.375M19.5 6l-2.4-2.4a1.125 1.125 0 0 0-1.087-.835h-7.26" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+            <?php
+            // get number of items in cart
+            $select_cart_count = $conn->prepare("SELECT COUNT(*) FROM `cart` WHERE user_id = ?");
+            $select_cart_count->execute([$user_id]);
+            $cart_count = $select_cart_count->fetchColumn();
+            ?>
+            <?php if ($cart_count > 0): ?>
+              <span
+                class="absolute -top-2 -right-2 inline-flex items-center justify-center rounded-full bg-red-600 px-2 py-1 text-xs font-bold leading-none text-white">
+                <?= $cart_count ?>
+              </span>
+            <?php endif; ?>
+          </a>
+          <a href="orders.php" class="text-sm/6 font-semibold text-white relative">
+            <span class="sr-only">Orders</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon"
+              aria-hidden="true" class="size-6">
+              <path
+                d="M3 3v1.5M3 21v-6m0 0l2.5-2.5m-2.5 2.5L5.5 9M21 3v1.5M21 21v-6m0 0l-2.5-2.5m2.5 2.5L18.5 9M3 8.25h18M3 12h18m-9 8.25h9"
+                stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <?php
+            // get number of orders
+            $select_orders_count = $conn->prepare("SELECT COUNT(*) FROM `orders` WHERE user_id = ?");
+            $select_orders_count->execute([$user_id]);
+            $orders_count = $select_orders_count->fetchColumn();
+            ?>
+            <?php if ($orders_count > 0): ?>
+              <span
+                class="absolute -top-2 -right-2 inline-flex items-center justify-center rounded-full bg-red-600 p-1 text-xs font-bold leading-none text-white">
+                <?= $orders_count ?>
+              </span>
+            <?php endif; ?>
+          </a>
+          <div class="relative">
+            <button type="button" class="flex items-center gap-2 text-sm/6 font-semibold text-white" id="user-menu-button"
+              aria-expanded="false" aria-haspopup="true">
+              <span class="sr-only">Open user menu</span>
+              <span>
 
-   .store-logo {
-      width: 40px;
-      /* Adjust size as needed */
-      border-radius: 50%;
-      /* Makes it circular */
-   }
-
-
-   .header-action-btn {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-   }
-
-   .btn-login {
-      display: inline-block;
-      padding: 10px 20px;
-      background-color: darkgreen;
-      color: white;
-      text-decoration: none;
-      border-radius: 5px;
-      font-size: 1.2rem;
-      font-weight: bold;
-      transition: background-color 0.3s ease-in-out;
-   }
-
-   .btn-login:hover {
-      background-color: green;
-   }
-
-   .btn-register {
-      display: inline-block;
-      padding: 10px 20px;
-      color: darkgreen;
-      text-decoration: none;
-      border-radius: 5px;
-      font-size: 1.2rem;
-      font-weight: bold;
-      transition: background-color 0.3s ease-in-out;
-   }
-
-   .btn-register:hover {
-      background-color: #f0f0f0;
-      color: darkgreen;
-   }
-</style>
-<header class="header">
-   <div class="flex">
-      <!-- Store Logo + Name -->
-      <div class="logo-container">
-         <img src="<?= $store_data[$current_store]['logo']; ?>" alt="Store Logo" class="store-logo">
-         <span class="store-name"><?= $store_data[$current_store]['name']; ?></span>
-      </div>
-
-      <nav class="navbar">
-         <a href="index.php">Home</a>
-         <a href="shop.php">Shop</a>
-         <a href="about.php">About Us</a>
-         <a href="contact.php">Contact</a>
-         <?php if ($current_store == 'kape_milagrosa') { ?>
-            <a href="#" id="switch-btn">Anak ng Birhen</a>
-         <?php } else { ?>
-            <a href="#" id="switch-btn">Kape Milagrosa</a>
-         <?php } ?>
-      </nav>
-
-      <div class="icons">
-         <?php if ($user_id) { ?>
-            <div id="menu-btn" class="fas fa-bars"></div>
-            <div id="user-btn" class="fas fa-user"></div>
-            <a href="wishlist.php"><i class="fas fa-heart"></i><span>(<?= $count_wishlist_items->rowCount(); ?>)</span></a>
-            <a href="cart.php"><i class="fas fa-shopping-cart"></i><span>(<?= $count_cart_items->rowCount(); ?>)</span></a>
-            <a href="orders.php"><i class="fas fa-box"></i><span>(<?= $count_orders_items->rowCount(); ?>)</span></a>
-         <?php } else { ?>
-            <div class="header-action-btn">
-               <a href="register.php" class="btn-register">
-                  Sign up
-               </a>
-               <span>|</span>
-               <a href="login.php" class="btn-login">
-                  Login
-               </a>
+                <!-- icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon"
+                  aria-hidden="true" class="size-6">
+                  <path
+                    d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a8.25 8.25 0 0 1 14.998 0 .75.75 0 0 1-.666 1.132h-13.66a.75.75 0 0 1-.672-1.132Z"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon"
+                aria-hidden="true" class="size-4">
+                <path d="m8.25 10.5 3.75 3.75 3.75-3.75" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <div
+              class="absolute right-0 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none hidden"
+              role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1" id="user-menu">
+              <!-- Active: "bg-gray-100", Not Active: "" -->
+              <a href="profile.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100
+              " role="menuitem" tabindex="-1" id="user-menu-item-0">Your Profile</a>
+              <a href="logout.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem"
+                tabindex="-1" id="user-menu-item-2">Sign out</a>
             </div>
-         <?php } ?>
+          </div>
+        </div>
+        <script>
+          // Toggle user menu
+          document.getElementById('user-menu-button').addEventListener('click', function () {
+            const menu = document.getElementById('user-menu');
+            menu.classList.toggle('hidden');
+          });
+
+          // Close the user menu when clicking outside
+          window.addEventListener('click', function (e) {
+            const menu = document.getElementById('user-menu');
+            const button = document.getElementById('user-menu-button');
+            if (!button.contains(e.target) && !menu.contains(e.target)) {
+              menu.classList.add('hidden');
+            }
+          });
+        </script>
+      <?php else: ?>
+        <a href="login.php" class="text-sm/6 font-semibold text-white ">Log in / Sign up <span
+            aria-hidden="true">&rarr;</span></a>
+      <?php endif; ?>
+
+    </div>
+  </nav>
+  <el-dialog>
+    <dialog id="mobile-menu" class="backdrop:bg-transparent lg:hidden">
+      <div tabindex="0" class="fixed inset-0 focus:outline-none">
+        <el-dialog-panel
+          class="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-gray-900 p-6 sm:max-w-sm sm:ring-1 sm:ring-gray-100/10">
+          <div class="flex items-center justify-between">
+            <a href="#" class="-m-1.5 p-1.5">
+              <span class="sr-only"><?= $current_store['name'] ?></span>
+              <img src="<?= $current_store['logo'] ?>" alt="" class="h-8 w-auto" />
+            </a>
+            <button type="button" command="close" commandfor="mobile-menu"
+              class="-m-2.5 rounded-md p-2.5 text-gray-200">
+              <span class="sr-only">Close menu</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon"
+                aria-hidden="true" class="size-6">
+                <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+          <div class="mt-6 flow-root">
+            <div class="-my-6 divide-y divide-white/10">
+              <div class="space-y-2 py-6">
+                <a href="index.php"
+                  class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-white hover:bg-white/5">Home</a>
+                <a href="products.php"
+                  class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-white hover:bg-white/5">Products</a>
+                <a href="about.php"
+                  class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-white hover:bg-white/5">About
+                  Us</a>
+                <a href="#contact-us"
+                  class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-white hover:bg-white/5">Contact
+                  Us</a>
+              </div>
+              <div class="py-6">
+                <?php if ($user_id && $user): ?>
+                  <div class="flex flex-col gap-4">
+                    <a href="wishlist.php"
+                      class="-mx-3 flex items-center gap-2 rounded-lg px-3 py-2 text-base/7 font-semibold text-white hover:bg-white/5">
+                      <span class="sr-only">Wishlist</span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon"
+                        aria-hidden="true" class="size-6">
+                        <path
+                          d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
+                          stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                      <span>Wishlist</span>
+                    </a>
+                    <a href="cart.php"
+                      class="-mx-3 flex items-center gap-2 rounded-lg px-3 py-2 text-base/7 font-semibold text-white hover:bg-white/5">
+                      <span class="sr-only">Cart</span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon"
+                        aria-hidden="true" class="size-6">
+                        <path
+                          d="M2.25 2.25h1.386c.51 0 .955.343 1.087.835l1.513 6.435M7.5 14.25a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm10.5 0a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM7.5 14.25h10.5m-10.5 0L6.16 5.59m11.34 8.66L19.5 6M6.16 5.59l-.31-1.91a1.125 1.125 0 0 0-1.087-.835H3.375M19.5 6l-2.4-2.4a1.125 1.125 0 0 0-1.087-.835h-7.26"
+                          stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                      <span>Cart</span>
+                      <?php if ($cart_count > 0): ?>
+                        <span
+                          class="inline-flex items-center justify-center rounded-full bg-red-600 px-2 py-1 text-xs font-bold leading-none text-white">
+                          <?= $cart_count ?>
+                        </span>
+                      <?php endif; ?>
+                    </a>
+                    <a href="orders.php"
+                      class="-mx-3 flex items-center gap-2 rounded-lg px-3 py-2 text-base/7 font-semibold text-white hover:bg-white/5">
+                      <span class="sr-only">Orders</span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon"
+                        aria-hidden="true" class="size-6">
+                        <path
+                          d="M3 3v1.5M3 21v-6m0 0l2.5-2.5m-2.5 2.5L5.5 9M21 3v1.5M21 21v-6m0 0l-2.5-2.5m2.5 2.5L18.5 9M3 8.25h18M3 12h18m-9 8.25h9"
+                          stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                      <span>Orders</span>
+                      <?php if ($orders_count > 0): ?>
+                        <span
+                          class="inline-flex items-center justify-center rounded-full bg-red-600 px-2 py-1 text-xs font-bold leading-none text-white">
+                          <?= $orders_count ?>
+                        </span>
+                      <?php endif; ?>
+                    </a>
+                    <a href="profile.php"
+                      class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-white hover:bg-white/5">Your
+                      Profile</a>
+                    <a href="logout.php"
+                      class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-white hover:bg-white/5">Sign
+                      out</a>
+                  </div>
+                <?php else: ?>
+                  <a href="login.php"
+                    class="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-white hover:bg-white/5">Log
+                    in / Sign up</a>
+                <?php endif; ?>
+
+              </div>
+            </div>
+          </div>
+        </el-dialog-panel>
       </div>
-      <div class="profile">
-         <img src="uploaded_img/<?= $fetch_profile['image']; ?>" alt="">
-         <p><?= $fetch_profile['name']; ?></p>
-         <a href="user_profile_update.php" class="btn">update profile</a>
-         <a href="logout.php" class="delete-btn">logout</a>
-      </div>
-   </div>
+    </dialog>
+  </el-dialog>
 </header>
-<script>
-   document.getElementById('switch-btn').addEventListener('click', function (event) {
-      event.preventDefault(); // Prevent default link behavior
-      fetch('switch_store.php', {
-         method: 'POST'
-      }).then(() => location.reload());
-   });
-</script>
