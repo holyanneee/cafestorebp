@@ -37,7 +37,7 @@ if (!isset($user_id) && (isset($_GET['product_id']) || isset($_GET['action']))) 
    unset($_GET['product_id']);
    unset($_GET['action']);
    header('location:login.php');
-   exit;
+   exit();
 }
 
 if (isset($user_id)) {

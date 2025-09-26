@@ -87,4 +87,41 @@ class FormatHelper
         $enum = 'Enums\\' . $enum;
         return $enum::from($status)->color();
     }
+
+    public static function formatPath(string $from, string $to): string
+    {
+        // Normalize paths
+        $from = realpath($from);
+        $to = realpath($to);
+
+        if (!$from || !$to) {
+            return $to; // fallback if realpath fails
+        }
+
+        // Split into parts
+        $fromParts = explode(DIRECTORY_SEPARATOR, $from);
+        $toParts = explode(DIRECTORY_SEPARATOR, $to);
+
+        // Remove common base path
+        while (!empty($fromParts) && !empty($toParts) && $fromParts[0] === $toParts[0]) {
+            array_shift($fromParts);
+            array_shift($toParts);
+        }
+
+        // Build relative path
+        $upLevels = count($fromParts);
+
+        // If up only once → use "./" instead of "../"
+        if ($upLevels === 1) {
+            $prefix = './';
+        } else {
+            $prefix = str_repeat('../', $upLevels);
+        }
+
+        $relative = $prefix . implode('/', $toParts);
+
+        // Always return with forward slashes
+        return str_replace('\\', '/', $relative);
+    }
+
 }

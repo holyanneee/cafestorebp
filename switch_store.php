@@ -1,11 +1,9 @@
 <?php
 session_start();
-$stores = [
-   'kape_milagrosa' => 'anak_ng_birhen',
-   'anak_ng_birhen' => 'kape_milagrosa'
-];
-
-if (isset($_SESSION['store'])) {
-   $_SESSION['store'] = $stores[$_SESSION['store']];
+if (isset($_GET['store'])) {
+   $store = $_GET['store'];
+   if (in_array($store, ['KM', 'ANB'])) {
+      $_SESSION['store_code'] = $store;
+   }
 }
 ?>

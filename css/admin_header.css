@@ -60,7 +60,7 @@
    display: none; /* Initially hide the profile until user clicks */
    position: absolute;
    right: 0;
-   top: 70px;
+   top: 20px;
    background-color: white;
    padding: 20px;
    border: 1px solid #ccc;
