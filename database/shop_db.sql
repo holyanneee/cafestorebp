@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Sep 22, 2025 at 02:49 PM
+-- Generation Time: Sep 27, 2025 at 06:21 AM
 -- Server version: 8.0.30
 -- PHP Version: 8.2.27
 
@@ -39,6 +39,16 @@ CREATE TABLE `cart` (
   `ingredients` json DEFAULT NULL,
   `special_instruction` text COLLATE utf8mb4_general_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `cart`
+--
+
+INSERT INTO `cart` (`id`, `user_id`, `product_id`, `quantity`, `type`, `cup_size`, `subtotal`, `add_ons`, `ingredients`, `special_instruction`) VALUES
+(24, 42, 39, 3, 'coffee', '{\"size\": \"Regular\", \"price\": 5}', '610.00', NULL, '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', NULL),
+(25, 42, 38, 1, 'coffee', '{\"size\": \"Regular\", \"price\": 5}', '255.00', NULL, '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', NULL),
+(26, 42, 30, 1, 'coffee', '{\"size\": \"Regular\", \"price\": 5}', '94.00', NULL, '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', NULL),
+(27, 42, 37, 2, 'coffee', '{\"size\": \"Regular\", \"price\": 5}', '200.00', NULL, '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', NULL);
 
 -- --------------------------------------------------------
 
@@ -88,12 +98,19 @@ INSERT INTO `ingredients` (`id`, `name`, `stock`, `unit`, `status`, `is_consumab
 
 CREATE TABLE `message` (
   `id` int NOT NULL,
-  `user_id` int NOT NULL,
+  `user_id` int DEFAULT NULL,
   `name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
   `email` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
   `number` varchar(12) COLLATE utf8mb4_general_ci NOT NULL,
   `message` varchar(500) COLLATE utf8mb4_general_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `message`
+--
+
+INSERT INTO `message` (`id`, `user_id`, `name`, `email`, `number`, `message`) VALUES
+(8, NULL, 'Dean Buckley', 'qwe', 'qwe', 'asd');
 
 -- --------------------------------------------------------
 
@@ -175,7 +192,7 @@ CREATE TABLE `products` (
   `status` varchar(20) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'active',
   `stock` int DEFAULT '0',
   `image` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee',
+  `type` enum('coffee','religious') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee',
   `is_featured` tinyint(1) NOT NULL DEFAULT '0',
   `ingredients` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
   `cup_sizes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin
@@ -192,10 +209,7 @@ INSERT INTO `products` (`id`, `name`, `category`, `details`, `price`, `status`, 
 (38, 'Frappe 2', 'Frappe', 'asd', 250, 'active', 0, 'prod_1746071904.jpg', 'coffee', 0, '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
 (39, 'frappuchino', 'Frappe', 'frappe ng mga Chinese', 300, 'active', 0, 'prod_1746071952.jpg', 'coffee', 0, '[1, 2, 5]', '{\"large\": 10, \"small\": 2, \"regular\": 5}'),
 (40, 'Brusko', 'Espresso', 'N-word Coffee', 100, 'active', 0, 'prod_1746098396.jpg', 'coffee', 0, '[1, 2]', '{\"large\": 20, \"small\": 5}'),
-(45, 'Tapioca Pearls', 'Add-ons', 'extra', 20, 'active', 0, 'prod_1748083606.jpg', 'coffee', 0, NULL, '[]'),
-(46, 'Chibi Religious Item', 'Chibi Religious Item', 'adsad', 100, 'active', 23, 'prod_1748193066.jpg', 'online', 0, NULL, NULL),
-(47, 'Baby Jesus', 'Statues', 'asda', 150, 'active', 20, 'prod_1748193098.jpg', 'online', 0, NULL, NULL),
-(48, 'Rosary', 'Rosary', 'wdas', 200, 'active', 23, 'prod_1748193118.jpg', 'online', 0, NULL, NULL);
+(45, 'Tapioca Pearls', 'Add-ons', 'extra', 20, 'active', 0, 'prod_1748083606.jpg', 'coffee', 0, NULL, '[]');
 
 -- --------------------------------------------------------
 
@@ -239,6 +253,17 @@ CREATE TABLE `wishlist` (
   `product_id` int NOT NULL,
   `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `wishlist`
+--
+
+INSERT INTO `wishlist` (`id`, `user_id`, `product_id`, `type`) VALUES
+(25, 42, 24, 'coffee'),
+(27, 42, 38, 'coffee'),
+(28, 42, 40, 'coffee'),
+(30, 42, 39, 'coffee'),
+(31, 42, 30, 'coffee');
 
 --
 -- Indexes for dumped tables
@@ -309,7 +334,7 @@ ALTER TABLE `wishlist`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `deliveries`
@@ -327,7 +352,7 @@ ALTER TABLE `ingredients`
 -- AUTO_INCREMENT for table `message`
 --
 ALTER TABLE `message`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `orders`
@@ -357,7 +382,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `wishlist`
 --
 ALTER TABLE `wishlist`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- Constraints for dumped tables
