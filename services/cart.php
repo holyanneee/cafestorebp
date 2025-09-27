@@ -1,36 +1,27 @@
 <?php
-// Always start with error reporting ON
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+declare(strict_types=1);
 
-// Start clean – remove any accidental whitespace
+// Debug + JSON header
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
 ob_start();
 header('Content-Type: application/json');
 
-// include config
-include __DIR__ . '/../config.php';
-
-
-// after including, clear output buffer (if config.php produced warnings)
-if (ob_get_length())
-    ob_clean();
-
-// session start AFTER headers
+// Config & session
+require __DIR__ . '/../config.php';
 session_start();
 
-$user_id = $_SESSION['user_id'] ?? null;
-$storeCode = $_SESSION['store_code'] ?? '';
-$type = $storeCode === 'KM' ? 'coffee' : 'online';
+// Clean output buffer after config if needed
+if (ob_get_length()) ob_clean();
 
-$action = filter_input(INPUT_POST, 'action', FILTER_SANITIZE_SPECIAL_CHARS);
-$product_id = filter_input(INPUT_POST, 'product_id', FILTER_SANITIZE_SPECIAL_CHARS);
+$user_id    = $_SESSION['user_id'] ?? null;
+$action     = $_POST['action'] ?? '';
+$product_id = isset($_POST['product_id']) ? (int)$_POST['product_id'] : 0;
 
-if (!isset($conn) || !$conn) {
+if (!$conn) {
     echo json_encode(['status' => 'error', 'message' => 'No DB connection']);
     exit;
 }
-
-// If not logged in → JSON error
 if (!$user_id) {
     echo json_encode([
         'status' => 'error',
@@ -40,67 +31,82 @@ if (!$user_id) {
     exit;
 }
 
-$message = null;
+if ($action !== 'add_to_cart' || $product_id <= 0) {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid request']);
+    exit;
+}
 
+try {
+    // Check if product exists once
+    $productStmt = $conn->prepare("SELECT * FROM `products` WHERE id=? LIMIT 1");
+    $productStmt->execute([$product_id]);
+    $product = $productStmt->fetch(PDO::FETCH_ASSOC);
 
+    if (!$product) {
+        echo json_encode(['status' => 'error', 'message' => 'Product not found']);
+        exit;
+    }
 
-if ($action === 'add_to_cart' && $product_id) {
-    $check_cart = $conn->prepare("SELECT * FROM `cart` WHERE product_id = ? AND user_id = ? AND type = ?");
-    $check_cart->execute([$product_id, $user_id, $type]);
+    // Check if already in cart
+    $cartStmt = $conn->prepare("SELECT * FROM `cart` WHERE product_id=? AND user_id=? LIMIT 1");
+    $cartStmt->execute([$product_id, $user_id]);
+    $cartItem = $cartStmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($check_cart->rowCount() > 0) {
-        $conn->prepare("UPDATE `cart` SET quantity = quantity + 1 WHERE product_id = ? AND user_id = ? AND type = ?")
-            ->execute([$product_id, $user_id, $type]);
-
-        $cart_item = $check_cart->fetch(PDO::FETCH_ASSOC);
-        $subtotal = $cart_item['subtotal'] * $cart_item['quantity'];
-        $conn->prepare("UPDATE `cart` SET subtotal = ? WHERE product_id = ? AND user_id = ? AND type = ?")
-            ->execute([$subtotal, $product_id, $user_id, $type]);
+    if ($cartItem) {
+        // Increment quantity & recalc subtotal
+        $newQuantity = $cartItem['quantity'] + 1;
+        $newSubtotal = $product['price'] * $newQuantity; // or use cup price if coffee
+        $upd = $conn->prepare("UPDATE `cart` SET quantity=?, subtotal=? WHERE product_id=? AND user_id=?");
+        $upd->execute([$newQuantity, $newSubtotal, $product_id, $user_id]);
 
         $message = 'Quantity updated in cart!';
     } else {
-        $conn->prepare("DELETE FROM `wishlist` WHERE product_id = ? AND user_id = ? AND type = ?")
-            ->execute([$product_id, $user_id, $type]);
+        // If new to cart → remove from wishlist
+        $conn->prepare("DELETE FROM `wishlist` WHERE product_id=? AND user_id=?")
+            ->execute([$product_id, $user_id]);
 
-        $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
-        $select_product->execute([$product_id]);
-        $product = $select_product->fetch(PDO::FETCH_ASSOC);
-
-        if ($type === 'coffee') {
+        if ($product['type'] === 'coffee') {
+            // Ingredients (single loop)
             $ingredients = [];
-            foreach (json_decode($product['ingredients'] ?? '[]') as $ingredient_id) {
-                $ingredient_stmt = $conn->prepare("SELECT * FROM `ingredients` WHERE id = ?");
-                $ingredient_stmt->execute([$ingredient_id]);
-                $ingredient = $ingredient_stmt->fetch(PDO::FETCH_ASSOC);
-                if ($ingredient) {
-                    $ingredients[$ingredient['id']] = ['name' => $ingredient['name'], 'level' => 'Regular'];
+            $ingredientIds = json_decode($product['ingredients'] ?? '[]', true);
+            if (!empty($ingredientIds)) {
+                $placeholders = implode(',', array_fill(0, count($ingredientIds), '?'));
+                $ingStmt = $conn->prepare("SELECT id,name FROM `ingredients` WHERE id IN ($placeholders)");
+                $ingStmt->execute($ingredientIds);
+                foreach ($ingStmt->fetchAll(PDO::FETCH_ASSOC) as $ing) {
+                    $ingredients[$ing['id']] = ['name' => $ing['name'], 'level' => 'Regular'];
                 }
             }
 
-            $cup_sizes = json_decode($product['cup_sizes'] ?? '{}', true);
-            $cup_size = isset($cup_sizes['regular']) ? 'Regular' : 'Small';
-            $cup_price = $cup_sizes[strtolower($cup_size)] ?? 0;
+            // Cup sizes
+            $cupSizes = json_decode($product['cup_sizes'] ?? '{}', true);
+            $cup_size  = isset($cupSizes['regular']) ? 'Regular' : 'Small';
+            $cup_price = $cupSizes[strtolower($cup_size)] ?? 0;
 
-            $conn->prepare("INSERT INTO `cart`(user_id, product_id, quantity, ingredients, cup_size, subtotal, type) 
-                      VALUES(?, ?, 1, ?, ?, ?, 'coffee')")
-                ->execute([
-                    $user_id,
-                    $product_id,
-                    json_encode($ingredients),
-                    json_encode(['size' => $cup_size, 'price' => $cup_price]),
-                    ($product['price'] + $cup_price)
-                ]);
+            $subtotal = $product['price'] + $cup_price;
+
+            $insert = $conn->prepare("INSERT INTO `cart` 
+                (user_id, product_id, quantity, ingredients, cup_size, subtotal, type) 
+                VALUES (?, ?, 1, ?, ?, ?, 'coffee')");
+            $insert->execute([
+                $user_id,
+                $product_id,
+                json_encode($ingredients),
+                json_encode(['size' => $cup_size, 'price' => $cup_price]),
+                $subtotal
+            ]);
         } else {
-            $conn->prepare("INSERT INTO `cart`(user_id, product_id, subtotal, quantity, type) 
-                      VALUES(?, ?, ?, 1, 'online')")
-                ->execute([$user_id, $product_id, $product['price']]);
+            $insert = $conn->prepare("INSERT INTO `cart`
+                (user_id, product_id, subtotal, quantity, type) 
+                VALUES (?, ?, ?, 1, 'religious')");
+            $insert->execute([$user_id, $product_id, $product['price']]);
         }
+
         $message = 'Added to cart!';
     }
-}
 
-echo json_encode([
-    'status' => 'success',
-    'message' => $message ?? 'No action performed'
-]);
-?>
+    echo json_encode(['status' => 'success', 'message' => $message]);
+} catch (PDOException $e) {
+    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+}
+exit;

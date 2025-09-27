@@ -17,102 +17,6 @@ if (session_status() === PHP_SESSION_NONE) {
 // get user id
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
 
-// set type based on store code
-$type = 'coffee';
-
-$category = $_GET['category'] ?? '';
-$query = "SELECT * FROM `products` WHERE `status` = 'active' AND `type` = ? AND `category` != 'Add-ons' ORDER BY id DESC LIMIT 6";
-$params = [$type];
-
-if (!empty($category)) {
-  $query = "SELECT * FROM `products` WHERE `status` = 'active' AND `type` = ? AND `category` = ? ORDER BY id DESC LIMIT 6";
-  $params[] = $category;
-}
-
-$select_products = $conn->prepare($query);
-$select_products->execute($params);
-$products = $select_products->fetchAll(PDO::FETCH_ASSOC);
-
-$limit = 8;
-
-// get popular products this week
-$select_popular = $conn->prepare("
-    SELECT 
-        op.product_id, 
-        p.name AS product_name, 
-        p.image AS product_image,
-        p.price,
-        SUM(op.quantity) AS total_quantity
-    FROM order_products op 
-    JOIN products p ON op.product_id = p.id 
-    JOIN orders o ON op.order_id = o.id
-    WHERE o.status = ?
-      AND p.type = ?
-      AND o.placed_on >= NOW() - INTERVAL 7 DAY
-    GROUP BY op.product_id, p.name, p.image, p.price
-    ORDER BY total_quantity DESC 
-    LIMIT 
-" . $limit);
-
-// assuming $completedStatus->value is the first param, and $type is second
-$select_popular->execute([$completedStatus->value, $type]);
-
-$popular_products = $select_popular->fetchAll(PDO::FETCH_ASSOC);
-
-// if there's no popular products this week, get random products
-if (count($popular_products) === 0) {
-  $select_random = $conn->prepare("
-      SELECT 
-          id AS product_id,
-          name AS product_name,
-          image AS product_image,
-          price
-      FROM `products` 
-      WHERE `status` = 'active' 
-        AND `type` = ? 
-        AND `category` != 'Add-ons'
-      ORDER BY RAND() 
-      LIMIT 
-  " . $limit);
-
-  $select_random->execute([$type]);
-  $popular_products = $select_random->fetchAll(PDO::FETCH_ASSOC);
-}
-
-// if the popular products are less than $limit, fill the rest with random products
-if (count($popular_products) < $limit) {
-  $needed = 5 - count($popular_products);
-  $existing_ids = array_column($popular_products, 'product_id');
-
-  $query = "
-      SELECT 
-          id AS product_id,
-          name AS product_name,
-          image AS product_image,
-          price
-      FROM `products` 
-      WHERE `status` = 'active' 
-        AND `type` = ? 
-        AND `category` != 'Add-ons'
-  ";
-
-  $params = [$type];
-
-  if (!empty($existing_ids)) {
-    $placeholders = implode(',', array_fill(0, count($existing_ids), '?'));
-    $query .= " AND id NOT IN ($placeholders)";
-    $params = array_merge($params, $existing_ids);
-  }
-
-  // ✅ inject LIMIT safely
-  $query .= " ORDER BY RAND() LIMIT $needed";
-
-  $select_additional = $conn->prepare($query);
-  $select_additional->execute($params);
-  $additional_products = $select_additional->fetchAll(PDO::FETCH_ASSOC);
-
-  $popular_products = array_merge($popular_products, $additional_products);
-}
 
 // get user info and 
 if ($user_id) {
@@ -132,9 +36,12 @@ ob_end_flush(); // Flush the output buffer and turn off output buffering
 <header class="absolute inset-x-0 top-0 z-50 <?= $current_page != 'index.php' ? 'bg-color' : '' ?>">
   <nav aria-label="Global" class="flex items-center justify-between px-2 py-3 lg:px-15">
     <div class="flex lg:flex-1">
-      <a href="#" class="-m-1.5 p-1.5">
-        <span class="sr-only"><?= $current_store['name'] ?></span>
-        <img src="<?= $current_store['logo'] ?>" alt="" class="h-10 w-auto rounded-full" />
+      <a href="index.php" class="-m-1.5 p-1.5 flex items-center gap-3">
+        <span class="sr-only">Kape Milagrosa</span>
+        <img src="images/kape_milag.jpg" alt="" class="h-15 w-auto rounded-full <?= $current_page != 'index.php' ? 'p-1 bg-white' : '' ?> " />
+        <span class="text-white text-lg font-bold">
+          Kape Milagrosa
+        </span>
       </a>
     </div>
     <div class="flex lg:hidden">
@@ -165,7 +72,19 @@ ob_end_flush(); // Flush the output buffer and turn off output buffering
                 d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
                 stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            <!-- You can add a badge for number of items in wishlist if needed -->
+            <?php
+            // get number of items in wishlist
+            $select_wishlist_count = $conn->prepare("SELECT COUNT(*) FROM `wishlist` WHERE user_id = ?");
+            $select_wishlist_count->execute([$user_id]);
+            $wishlist_count = $select_wishlist_count->fetchColumn();
+            ?>
+            <?php if ($wishlist_count > 0): ?>
+              <span
+                class="absolute -top-2 -right-2 inline-flex items-center justify-center rounded-full bg-red-600 px-2 py-1 text-xs font-bold leading-none text-white">
+                <?= $wishlist_count ?>
+              </span>
+            <?php endif; ?>
+            
           </a>
           <a href="cart.php" class="text-sm/6 font-semibold text-white relative">
             <span class="sr-only">Cart</span>

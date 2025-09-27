@@ -1,35 +1,33 @@
 <?php
-// Always start with error reporting ON
+declare(strict_types=1);
+
+// Error reporting
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', '1');
 
-// Start clean – remove any accidental whitespace
+// Start buffering early
 ob_start();
-header('Content-Type: application/json');
 
-// include config
-include __DIR__ . '/../config.php';
-
-
-// after including, clear output buffer (if config.php produced warnings)
-if (ob_get_length()) ob_clean();
-
-// session start AFTER headers
+// Include config & start session
+require __DIR__ . '/../config.php';
 session_start();
 
-$user_id = $_SESSION['user_id'] ?? null;
-$storeCode = $_SESSION['store_code'] ?? '';
-$type = $storeCode === 'KM' ? 'coffee' : 'online';
+// Send JSON header AFTER including config
+if (!headers_sent()) {
+    header('Content-Type: application/json');
+}
 
-$action = filter_input(INPUT_POST, 'action', FILTER_SANITIZE_SPECIAL_CHARS);
-$product_id = filter_input(INPUT_POST, 'product_id', FILTER_SANITIZE_SPECIAL_CHARS);
+// Ensure no stray output
+if (ob_get_length()) ob_clean();
 
-if (!isset($conn) || !$conn) {
+// Check DB connection
+if (empty($conn)) {
     echo json_encode(['status' => 'error', 'message' => 'No DB connection']);
     exit;
 }
 
-// If not logged in → JSON error
+// Logged in?
+$user_id = $_SESSION['user_id'] ?? null;
 if (!$user_id) {
     echo json_encode([
         'status' => 'error',
@@ -39,40 +37,40 @@ if (!$user_id) {
     exit;
 }
 
-$message = null;
+// Inputs
+$action = $_POST['action'] ?? '';
+$product_id = isset($_POST['product_id']) ? (int) $_POST['product_id'] : 0;
 
+if ($action !== 'add_to_wishlist' || $product_id <= 0) {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid request']);
+    exit;
+}
 
-if ($action === 'add_to_wishlist' && $product_id) {
-    try {
-        $check_favourite = $conn->prepare(
-            "SELECT 1 FROM `wishlist` WHERE product_id = ? AND user_id = ? AND type = ?"
-        );
-        $check_favourite->execute([$product_id, $user_id, $type]);
-    } catch (PDOException $e) {
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+try {
+    // Check if already in wishlist
+    $check = $conn->prepare("SELECT 1 FROM `wishlist` WHERE product_id=? AND user_id=? LIMIT 1");
+    $check->execute([$product_id, $user_id]);
+    if ($check->fetchColumn()) {
+        echo json_encode(['status' => 'info', 'message' => 'Already added to wishlist!']);
         exit;
     }
 
-
-    if ($check_favourite->rowCount() > 0) {
-        $message = 'Already added to wishlist!';
-    } else {
-        $select_product = $conn->prepare("SELECT * FROM `products` WHERE id = ?");
-        $select_product->execute([$product_id]);
-
-        if ($select_product->rowCount() > 0) {
-            $conn->prepare(
-                "INSERT INTO `wishlist` (user_id, product_id, type) VALUES(?, ?, ?)"
-            )->execute([$user_id, $product_id, $type]);
-            $message = 'Added to wishlist!';
-        } else {
-            $message = 'Product not found!';
-        }
+    // Verify product exists
+    $productStmt = $conn->prepare("SELECT id FROM `products` WHERE id=? LIMIT 1");
+    $productStmt->execute([$product_id]);
+    if (!$productStmt->fetchColumn()) {
+        echo json_encode(['status' => 'error', 'message' => 'Product not found!']);
+        exit;
     }
-}
 
-echo json_encode([
-    'status' => 'success',
-    'message' => $message ?? 'No action performed'
-]);
+    // Insert WITHOUT type column
+    $insert = $conn->prepare(
+        "INSERT INTO `wishlist` (user_id, product_id) VALUES (?, ?)"
+    );
+    $insert->execute([$user_id, $product_id]);
+
+    echo json_encode(['status' => 'success', 'message' => 'Added to wishlist!']);
+} catch (PDOException $e) {
+    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+}
 exit;

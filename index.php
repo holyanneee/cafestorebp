@@ -2,9 +2,12 @@
 @include 'config.php';
 session_start();
 require_once 'helpers/FormatHelper.php';
+require_once 'enums/OrderStatusEnum.php';
 
 use Helpers\FormatHelper;
+use enums\OrderStatusEnum;
 
+$completedStatus = OrderStatusEnum::Completed;
 $type = 'coffee';
 $alert = [];
 // fetch favorite products of user
@@ -18,60 +21,60 @@ if (isset($_SESSION['user_id'])) {
 }
 if (!isset($_SESSION['categories'])) {
     $_SESSION['categories'] = [
-      [
-        'name' => 'Frappe',
-        'image' => 'Frappe.jpg',
-        'description' => 'Creamy blended coffee drinks topped with whipped cream.',
-      ],
-      [
-        'name' => 'Fruit Soda',
-        'image' => 'Fruit Soda.jpg',
-        'description' => 'Refreshing carbonated drinks with fruity flavors.',
-      ],
-  
-      [
-        'name' => 'Frappe Extreme',
-        'image' => 'Frappe Extreme.jpg',
-        'description' => 'Extra indulgent frappes with bold flavors and toppings.',
-      ],
-      [
-        'name' => 'Milk Tea',
-        'image' => 'Milk Tea.jpg',
-        'description' => 'Classic tea mixed with creamy milk and chewy pearls.',
-      ],
-      [
-        'name' => 'Fruit Tea',
-        'image' => 'Fruit Tea.jpg',
-        'description' => 'Light and refreshing teas infused with real fruits.',
-      ],
-      [
-        'name' => 'Fruit Milk',
-        'image' => '',
-        'description' => 'Smooth, chilled milk blended with fresh fruit flavors.',
-      ],
-      [
-        'name' => 'Espresso',
-        'image' => 'Fruit Milk.jpg',
-        'description' => 'Strong, rich shots of pure coffee perfection.',
-      ],
-      [
-        'name' => 'Hot Non-Coffee',
-        'image' => 'Hot Non-Coffee.png',
-        'description' => 'Warm drinks without coffee for cozy moments.',
-      ],
-      [
-        'name' => 'Iced Non-Coffee',
-        'image' => 'Iced Non-Coffee.jpg',
-        'description' => 'Chilled beverages for non-coffee lovers.',
-      ],
-      [
-        'name' => 'Snacks',
-        'image' => 'Snacks.jpg',
-        'description' => 'Delicious bites to pair with your favorite drinks.',
-      ],
+        [
+            'name' => 'Frappe',
+            'image' => 'Frappe.jpg',
+            'description' => 'Creamy blended coffee drinks topped with whipped cream.',
+        ],
+        [
+            'name' => 'Fruit Soda',
+            'image' => 'Fruit Soda.jpg',
+            'description' => 'Refreshing carbonated drinks with fruity flavors.',
+        ],
+
+        [
+            'name' => 'Frappe Extreme',
+            'image' => 'Frappe Extreme.jpg',
+            'description' => 'Extra indulgent frappes with bold flavors and toppings.',
+        ],
+        [
+            'name' => 'Milk Tea',
+            'image' => 'Milk Tea.jpg',
+            'description' => 'Classic tea mixed with creamy milk and chewy pearls.',
+        ],
+        [
+            'name' => 'Fruit Tea',
+            'image' => 'Fruit Tea.jpg',
+            'description' => 'Light and refreshing teas infused with real fruits.',
+        ],
+        [
+            'name' => 'Fruit Milk',
+            'image' => '',
+            'description' => 'Smooth, chilled milk blended with fresh fruit flavors.',
+        ],
+        [
+            'name' => 'Espresso',
+            'image' => 'Fruit Milk.jpg',
+            'description' => 'Strong, rich shots of pure coffee perfection.',
+        ],
+        [
+            'name' => 'Hot Non-Coffee',
+            'image' => 'Hot Non-Coffee.png',
+            'description' => 'Warm drinks without coffee for cozy moments.',
+        ],
+        [
+            'name' => 'Iced Non-Coffee',
+            'image' => 'Iced Non-Coffee.jpg',
+            'description' => 'Chilled beverages for non-coffee lovers.',
+        ],
+        [
+            'name' => 'Snacks',
+            'image' => 'Snacks.jpg',
+            'description' => 'Delicious bites to pair with your favorite drinks.',
+        ],
     ];
-  
-  }
+
+}
 
 $categories = $_SESSION['categories'] ?? [];
 
@@ -113,6 +116,102 @@ if (count($temp_top_categories) === 0) {
             }
         }
     }
+}
+
+$type = 'coffee';
+
+$category = $_GET['category'] ?? '';
+$query = "SELECT * FROM `products` WHERE `status` = 'active' AND `type` = ? AND `category` != 'Add-ons' ORDER BY id DESC LIMIT 6";
+$params = [$type];
+
+if (!empty($category)) {
+    $query = "SELECT * FROM `products` WHERE `status` = 'active' AND `type` = ? AND `category` = ? ORDER BY id DESC LIMIT 6";
+    $params[] = $category;
+}
+
+$select_products = $conn->prepare($query);
+$select_products->execute($params);
+$products = $select_products->fetchAll(PDO::FETCH_ASSOC);
+
+$limit = 8;
+
+// get popular products this week
+$select_popular = $conn->prepare("
+    SELECT 
+        op.product_id, 
+        p.name AS product_name, 
+        p.image AS product_image,
+        p.price,
+        SUM(op.quantity) AS total_quantity
+    FROM order_products op 
+    JOIN products p ON op.product_id = p.id 
+    JOIN orders o ON op.order_id = o.id
+    WHERE o.status = ?
+      AND p.type = ?
+      AND o.placed_on >= NOW() - INTERVAL 7 DAY
+    GROUP BY op.product_id, p.name, p.image, p.price
+    ORDER BY total_quantity DESC 
+    LIMIT 
+" . $limit);
+
+// assuming $completedStatus->value is the first param, and $type is second
+$select_popular->execute([$completedStatus->value, $type]);
+
+$popular_products = $select_popular->fetchAll(PDO::FETCH_ASSOC);
+
+// if there's no popular products this week, get random products
+if (count($popular_products) === 0) {
+    $select_random = $conn->prepare("
+      SELECT 
+          id AS product_id,
+          name AS product_name,
+          image AS product_image,
+          price
+      FROM `products` 
+      WHERE `status` = 'active' 
+        AND `type` = ? 
+        AND `category` != 'Add-ons'
+      ORDER BY RAND() 
+      LIMIT 
+  " . $limit);
+
+    $select_random->execute([$type]);
+    $popular_products = $select_random->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// if the popular products are less than $limit, fill the rest with random products
+if (count($popular_products) < $limit) {
+    $needed = 5 - count($popular_products);
+    $existing_ids = array_column($popular_products, 'product_id');
+
+    $query = "
+      SELECT 
+          id AS product_id,
+          name AS product_name,
+          image AS product_image,
+          price
+      FROM `products` 
+      WHERE `status` = 'active' 
+        AND `type` = ? 
+        AND `category` != 'Add-ons'
+  ";
+
+    $params = [$type];
+
+    if (!empty($existing_ids)) {
+        $placeholders = implode(',', array_fill(0, count($existing_ids), '?'));
+        $query .= " AND id NOT IN ($placeholders)";
+        $params = array_merge($params, $existing_ids);
+    }
+
+    // ✅ inject LIMIT safely
+    $query .= " ORDER BY RAND() LIMIT $needed";
+
+    $select_additional = $conn->prepare($query);
+    $select_additional->execute($params);
+    $additional_products = $select_additional->fetchAll(PDO::FETCH_ASSOC);
+
+    $popular_products = array_merge($popular_products, $additional_products);
 }
 
 // contact form

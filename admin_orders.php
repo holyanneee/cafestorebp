@@ -280,7 +280,7 @@ $orders = FormatHelper::formatOrders($orders, $conn);
                 <select class="form-select form-select-sm" style="width: 140px;" id="typeFilter">
                     <option value="all" selected>All Types</option>
                     <option value="coffee">Coffee</option>
-                    <option value="online">Online</option>
+                    <option value="religious">Online</option>
                 </select>
                 <input type="date" class="form-control form-control-sm" style="width: 140px;" id="dateFilter">
                 <button class="btn btn-sm btn-outline-secondary" style="font-size: 12px;" id="clearFilters">✖

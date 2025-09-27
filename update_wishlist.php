@@ -10,7 +10,7 @@ header('Content-Type: application/json');
 try {
     $user_id = $_SESSION['user_id'] ?? null;
     $current_store = $_SESSION['store'] ?? null;
-    $type = ($current_store === 'kape_milagrosa') ? 'coffee' : 'online';
+    $type = ($current_store === 'kape_milagrosa') ? 'coffee' : 'religious';
     if (!$user_id) {
         echo json_encode(['success' => false, 'message' => 'User not logged in']);
         exit;
@@ -113,7 +113,7 @@ try {
 
                     } else {
                         // Insert new cart item (basic example)
-                        $stmt = $conn->prepare("INSERT INTO cart (user_id, product_id, quantity, type) VALUES (?, ?, ?, 'online')");
+                        $stmt = $conn->prepare("INSERT INTO cart (user_id, product_id, quantity, type) VALUES (?, ?, ?, 'religious')");
                         $stmt->execute([$user_id, $product_id, 1]);
                     }
                 }
@@ -196,7 +196,7 @@ try {
 
                     } else {
                         // Insert new cart item (basic example)
-                        $stmt = $conn->prepare("INSERT INTO cart (user_id, product_id, quantity, type) VALUES (?, ?, ?, 'online')");
+                        $stmt = $conn->prepare("INSERT INTO cart (user_id, product_id, quantity, type) VALUES (?, ?, ?, 'religious')");
                         $stmt->execute([$user_id, $product_id, 1]);
                     }
                 }

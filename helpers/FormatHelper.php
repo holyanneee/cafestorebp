@@ -46,7 +46,7 @@ class FormatHelper
                     $product['quantity'] = $order_product['quantity'];
                     $product['subtotal'] = $order_product['subtotal'];
 
-                    if ($product['type'] === 'online' || $product['type'] === 'coffee') {
+                    if ($product['type'] === 'religious' || $product['type'] === 'coffee') {
                         return [
                             'id' => $product['id'],
                             'name' => htmlspecialchars($product['name'] ?? '', ENT_QUOTES, 'UTF-8'),

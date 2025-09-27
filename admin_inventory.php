@@ -13,7 +13,7 @@ if (!$admin_id) {
 if (isset($_GET['delete'])) {
     $delete_id = $_GET['delete'];
 
-    $delete_product = $conn->prepare("DELETE FROM products WHERE id = ? AND type = 'online'");
+    $delete_product = $conn->prepare("DELETE FROM products WHERE id = ? AND type = 'religious'");
     $delete_product->execute([$delete_id]);
 
     header('location:admin_inventory.php');
@@ -28,7 +28,7 @@ if (isset($_POST['add_product'])) {
     $stock = filter_var($_POST['stock'], FILTER_VALIDATE_INT);
     $details = htmlspecialchars($_POST['details'], ENT_QUOTES, 'UTF-8');
     $status = 'active'; // Default status for new products
-    $type = 'online'; // Default type for this page
+    $type = 'religious'; // Default type for this page
 
     $image = $_FILES['image']['name'];
     $image_tmp_name = $_FILES['image']['tmp_name'];
@@ -62,11 +62,11 @@ if (isset($_POST['update_product'])) {
         move_uploaded_file($image_tmp_name, $image_path);
 
         // Update query with image
-        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, details=?, price=?, status=?, stock=?, image=? WHERE id=? AND type='online'");
+        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, details=?, price=?, status=?, stock=?, image=? WHERE id=? AND type='religious'");
         $update_product->execute([$name, $category, $details, $price, $status, $stock, $unique_image_name, $update_id]);
     } else {
         // Update query without image
-        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, details=?, price=?, status=?, stock=? WHERE id=? AND type='online'");
+        $update_product = $conn->prepare("UPDATE products SET name=?, category=?, details=?, price=?, status=?, stock=? WHERE id=? AND type='religious'");
         $update_product->execute([$name, $category, $details, $price, $status, $stock, $update_id]);
     }
 
@@ -129,7 +129,7 @@ if (isset($_POST['update_product'])) {
             </thead>
             <tbody>
                 <?php
-                $show_products = $conn->prepare("SELECT * FROM products WHERE type = 'online' ORDER BY id DESC");
+                $show_products = $conn->prepare("SELECT * FROM products WHERE type = 'religious' ORDER BY id DESC");
                 $show_products->execute();
                 if ($show_products->rowCount() > 0) {
                     while ($fetch_products = $show_products->fetch(PDO::FETCH_ASSOC)) {
@@ -492,38 +492,40 @@ if (isset($_POST['update_product'])) {
                 margin-left: 0;
                 margin: 15px;
             }
-            
+
             .menu-header {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 10px;
             }
-            
+
             .menu-actions {
                 width: 100%;
                 flex-wrap: wrap;
             }
-            
+
             .menu-actions select,
             .menu-actions input {
                 flex-grow: 1;
                 min-width: 150px;
             }
         }
+
         /* Adjust font size in modals */
-.modal-content {
-    font-size: 14px; /* Adjust as needed */
-}
+        .modal-content {
+            font-size: 14px;
+            /* Adjust as needed */
+        }
 
-/* Optionally, target specific elements */
-.modal-content label,
-.modal-content input,
-.modal-content select,
-.modal-content textarea,
-.modal-content button {
-    font-size: 14px; /* Keep it consistent */
-}
-
+        /* Optionally, target specific elements */
+        .modal-content label,
+        .modal-content input,
+        .modal-content select,
+        .modal-content textarea,
+        .modal-content button {
+            font-size: 14px;
+            /* Keep it consistent */
+        }
     </style>
     <script>
         document.addEventListener("DOMContentLoaded", function () {

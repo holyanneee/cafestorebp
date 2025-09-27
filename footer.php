@@ -19,7 +19,7 @@
                         </p>
                         <!-- button -->
                         <div class="mt-6">
-                            <a href="" class="inline-block rounded bg-white px-3 py-2 text-sm font-medium text-color transition hover:bg-gray-300
+                            <a href="products.php?type=religious" class="inline-block rounded bg-white px-3 py-2 text-sm font-medium text-color transition hover:bg-gray-300
                                  focus:outline-none focus:ring">
                                 View Products
                             </a>
@@ -57,7 +57,7 @@
                                 <?php if (in_array($category['name'], $topCategoryNames, true))
                                     continue; ?>
                                 <li>
-                                    <a href="/category/<?= htmlspecialchars($category['name']); ?>"
+                                    <a href="products.php?category=<?= urlencode($category['name']); ?>"
                                         class="text-gray-700 transition hover:opacity-75 dark:text-gray-200">
                                         <?= htmlspecialchars($category['name']); ?>
                                     </a>

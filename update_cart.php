@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 try {
     $user_id = $_SESSION['user_id'] ?? null;
     $current_store = $_SESSION['store'] ?? null;
-    $type = ($current_store === 'kape_milagrosa') ? 'coffee' : 'online';
+    $type = ($current_store === 'kape_milagrosa') ? 'coffee' : 'religious';
 
     if (!$user_id) {
         ob_clean(); // ADD THIS to ensure clean output buffer

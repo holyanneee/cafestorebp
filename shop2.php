@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 @include 'config.php';
 
@@ -68,110 +68,117 @@ if (isset($_POST['add_to_cart'])) {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-   <meta charset="UTF-8">
-   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>shop</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>shop</title>
 
-   <!-- font awesome cdn link  -->
-   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <!-- font awesome cdn link  -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
 
-   <!-- custom css file link  -->
-   <link rel="stylesheet" href="css/style.css">
-   <style>
-.category-buttons {
+    <!-- custom css file link  -->
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .category-buttons {
 
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-    margin-top: 10px;
-}
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
 
-.category-btn {
-    text-decoration: none;
-    padding: 12px 20px; /* Increased padding for better appearance */
-    border: 2px solid darkgreen; /* Change color as needed */
-    border-radius: 15px; /* Changed to make it more rectangular */
-    font-weight: bold;
-    font-size: 16px; /* Adjusted font size */
-    color: black;
-    transition: all 0.3s ease-in-out;
-}
+        .category-btn {
+            text-decoration: none;
+            padding: 12px 20px;
+            /* Increased padding for better appearance */
+            border: 2px solid darkgreen;
+            /* Change color as needed */
+            border-radius: 15px;
+            /* Changed to make it more rectangular */
+            font-weight: bold;
+            font-size: 16px;
+            /* Adjusted font size */
+            color: black;
+            transition: all 0.3s ease-in-out;
+        }
 
-.category-btn:hover {
-    background: darkgreen; /* Adjusted hover color to match border */
-    color: white;
-}
-
-</style>
+        .category-btn:hover {
+            background: darkgreen;
+            /* Adjusted hover color to match border */
+            color: white;
+        }
+    </style>
 
 </head>
+
 <body>
-   
-<?php include 'header.php'; ?>
 
-<section class="p-category">
+    <?php include 'header.php'; ?>
 
-  <div class="category-buttons">
-      
-  <a href="category.php?category=Chibi Religious Items" class="category-btn">Chibi Religious Items</a>
-      <a href="category.php?category=Angels" class="category-btn">Angels</a>
-      <a href="category.php?category=Cross" class="category-btn">Cross</a>
-      <a href="category.php?category=Prayer Pocket" class="category-btn">Prayer Pocket</a>
-      <a href="category.php?category=Rosary" class="category-btn">Rosary</a>
-      <a href="category.php?category=Ref Magnet" class="category-btn">Ref Magnet</a>
-      <a href="category.php?category=Keychain" class="category-btn">Keychain</a>
-      <a href="category.php?category=Scapular" class="category-btn">Scapular</a>
-      <a href="category.php?category=Statues" class="category-btn">Statues</a>
-    
-   </div>
+    <section class="p-category">
 
-</section>
+        <div class="category-buttons">
 
-<section class="products">
+            <a href="category.php?category=Chibi Religious Items" class="category-btn">Chibi Religious Items</a>
+            <a href="category.php?category=Angels" class="category-btn">Angels</a>
+            <a href="category.php?category=Cross" class="category-btn">Cross</a>
+            <a href="category.php?category=Prayer Pocket" class="category-btn">Prayer Pocket</a>
+            <a href="category.php?category=Rosary" class="category-btn">Rosary</a>
+            <a href="category.php?category=Ref Magnet" class="category-btn">Ref Magnet</a>
+            <a href="category.php?category=Keychain" class="category-btn">Keychain</a>
+            <a href="category.php?category=Scapular" class="category-btn">Scapular</a>
+            <a href="category.php?category=Statues" class="category-btn">Statues</a>
 
-   <h1 class="title">latest products</h1>
+        </div>
 
-   <div class="box-container">
+    </section>
 
-   <?php
-      $select_products = $conn->prepare("SELECT * FROM `products` WHERE type = 'online' LIMIT 6");
-      $select_products->execute();
-      if($select_products->rowCount() > 0){
-         while($fetch_products = $select_products->fetch(PDO::FETCH_ASSOC)){ 
-   ?>
-   <form action="" class="box" method="POST">
-      <div class="price">₱<span><?= $fetch_products['prod_price']; ?></span>/-</div>
-      <a href="view_page.php?pid=<?= $fetch_products['prod_id']; ?>" class="fas fa-eye"></a>
-      <img src="uploaded_img/<?= $fetch_products['prod_image']; ?>" alt="">
-      <div class="name"><?= $fetch_products['prod_name']; ?></div>
-      <input type="hidden" name="pid" value="<?= $fetch_products['prod_id']; ?>">
-      <input type="hidden" name="p_name" value="<?= $fetch_products['prod_name']; ?>">
-      <input type="hidden" name="p_price" value="<?= $fetch_products['prod_price']; ?>">
-      <input type="hidden" name="p_image" value="<?= $fetch_products['prod_image']; ?>">
-      <input type="number" min="1" value="1" name="p_qty" class="qty">
-      <input type="submit" value="add to wishlist" class="option-btn" name="add_to_wishlist">
-      <input type="submit" value="add to cart" class="btn" name="add_to_cart">
-   </form>
-   <?php
-      }
-   }else{
-      echo '<p class="empty">no products added yet!</p>';
-   }
-   ?>
+    <section class="products">
 
-   </div>
+        <h1 class="title">latest products</h1>
 
-</section>
+        <div class="box-container">
 
+            <?php
+            $select_products = $conn->prepare("SELECT * FROM `products` WHERE type = 'religious' LIMIT 6");
+            $select_products->execute();
+            if ($select_products->rowCount() > 0) {
+                while ($fetch_products = $select_products->fetch(PDO::FETCH_ASSOC)) {
+                    ?>
+                    <form action="" class="box" method="POST">
+                        <div class="price">₱<span><?= $fetch_products['prod_price']; ?></span>/-</div>
+                        <a href="view_page.php?pid=<?= $fetch_products['prod_id']; ?>" class="fas fa-eye"></a>
+                        <img src="uploaded_img/<?= $fetch_products['prod_image']; ?>" alt="">
+                        <div class="name"><?= $fetch_products['prod_name']; ?></div>
+                        <input type="hidden" name="pid" value="<?= $fetch_products['prod_id']; ?>">
+                        <input type="hidden" name="p_name" value="<?= $fetch_products['prod_name']; ?>">
+                        <input type="hidden" name="p_price" value="<?= $fetch_products['prod_price']; ?>">
+                        <input type="hidden" name="p_image" value="<?= $fetch_products['prod_image']; ?>">
+                        <input type="number" min="1" value="1" name="p_qty" class="qty">
+                        <input type="submit" value="add to wishlist" class="option-btn" name="add_to_wishlist">
+                        <input type="submit" value="add to cart" class="btn" name="add_to_cart">
+                    </form>
+                    <?php
+                }
+            } else {
+                echo '<p class="empty">no products added yet!</p>';
+            }
+            ?>
 
+        </div>
+
+    </section>
 
 
-<?php include 'footer.php'; ?>
 
-<script src="js/script.js"></script>
+
+    <?php include 'footer.php'; ?>
+
+    <script src="js/script.js"></script>
 
 </body>
+
 </html>
