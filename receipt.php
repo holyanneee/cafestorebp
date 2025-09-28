@@ -2,11 +2,7 @@
 @include 'config.php';
 session_start();
 
-$admin_id = $_SESSION['cashier_id'] ?? null;
-if (!$admin_id) {
-    header('location:login.php');
-    exit();
-}
+
 
 $order_id = $_GET['order_id'] ?? null;
 if (!$order_id) {
@@ -45,6 +41,11 @@ if (!$order) {
 }
 
 if (empty($order['receipt'])) {
+    $admin_id = $_SESSION['cashier_id'] ?? null;
+    if (!$admin_id) {
+        header('location:login.php');
+        exit();
+    }
     $cashier_name = $_SESSION['cashier_name'] ?? 'Unknown';
 
     $product_ids = explode(',', $order['product_ids']);
@@ -94,7 +95,7 @@ if (empty($order['receipt'])) {
     $pdf->SetFont('Arial', 'B', 12);
     if ($order['type'] == 'coffee') {
         $pdf->Cell(0, 5, 'Kape Milagrosa', 0, 1, 'C');
-    }else{
+    } else {
         $pdf->Cell(0, 5, 'Anak ng Birhen', 0, 1, 'C');
 
     }

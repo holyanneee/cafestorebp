@@ -1,7 +1,9 @@
 <?php
 
-
 namespace Helpers;
+require_once 'enums/OrderStatusEnum.php';
+
+use Enums\OrderStatusEnum;
 class FormatHelper
 {
     public static function formatPrice(float $price): string
@@ -17,13 +19,14 @@ class FormatHelper
             $formatted_orders[] = [
                 'order_id' => $order['order_id'],
                 'name' => htmlspecialchars($order['name']),
+                'number' => htmlspecialchars($order['number'] ?? ''),
                 'email' => htmlspecialchars($order['email']),
                 'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
                 'type' => htmlspecialchars($order['type']),
                 'status' => [
                     'value' => htmlspecialchars($order['status']),
-                    'label' => \Enums\OrderStatusEnum::from($order['status'])->label(),
-                    'color' => \Enums\OrderStatusEnum::from($order['status'])->color()
+                    'label' => OrderStatusEnum::from($order['status'])->label(),
+                    'color' => OrderStatusEnum::from($order['status'])->color()
                 ],
                 'total_price' => number_format((int) $order['total_price'], 2),
                 'products' => array_filter(array_map(function ($product_id) use ($conn, $order) {

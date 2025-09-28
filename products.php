@@ -128,7 +128,6 @@ if (isset($_SESSION['user_id'])) {
                     <form method="get" class="flex flex-wrap gap-3" id="filters">
                         <!-- Type Filter -->
                         <select name="type" class="h-10 rounded border-gray-300 text-sm" id="type">
-                            <option value="">All Types</option>
                             <option value="coffee" <?= $type === 'coffee' ? 'selected' : ''; ?>>Coffee</option>
                             <option value="religious" <?= $type === 'religious' ? 'selected' : ''; ?>>Religious Items
                             </option>
@@ -149,7 +148,7 @@ if (isset($_SESSION['user_id'])) {
                             value="<?= htmlspecialchars($search); ?>"
                             class="h-10 rounded border-gray-300 text-sm px-3" />
                         <!-- reset btn -->
-                        <a href="products.php" class="h-10 rounded bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200">Reset</a>
+                        <a href="products.php" class="h-10 rounded bg-red-100 px-4 py-2 text-sm text-red-700 hover:bg-red-200">Reset</a>
                     </form>
                 </div>
 
@@ -255,6 +254,7 @@ if (isset($_SESSION['user_id'])) {
     <?php include 'footer.php'; ?>
     <!-- sweet alert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
     <script>
         // check if the filters are changed
         document.addEventListener('DOMContentLoaded', () => {
@@ -377,7 +377,7 @@ if (isset($_SESSION['user_id'])) {
             });
         });
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
+   
 </body>
 
 </html>
