@@ -298,13 +298,13 @@ if (!empty($_POST['send'])) {
                     <div class="mt-4 flex gap-4 sm:mt-6">
                         <!-- Primary Button -->
                         <a class="inline-block rounded border-color bg-color px-5 py-3 font-medium text-white shadow-sm transition-colors bg-hover-color"
-                            href="#">
+                            href="products.php">
                             Order Now
                         </a>
 
                         <!-- Secondary Button -->
                         <a class="inline-block rounded border border-gray-200 px-5 py-3 font-medium text-gray-100 shadow-sm transition-colors hover:bg-gray-50 text-hover-color"
-                            href="#">
+                            href="about.php">
                             Learn More
                         </a>
                     </div>
@@ -324,7 +324,7 @@ if (!empty($_POST['send'])) {
 
                     <div class="lg:col-span-3 grid gap-4 sm:grid-cols-3">
                         <?php foreach ($top_categories as $top_category): ?>
-                            <a href="#"
+                            <a href="products.php?category=<?= $top_category['name'] ?>"
                                 class="relative block overflow-hidden rounded group border border-white/50 bg-white/30 backdrop-blur-sm">
 
                                 <img src="images/<?= htmlspecialchars($top_category['image'] ?: 'default.jpg') ?>"
