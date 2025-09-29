@@ -181,38 +181,42 @@ if (count($popular_products) === 0) {
 
 // if the popular products are less than $limit, fill the rest with random products
 if (count($popular_products) < $limit) {
-    $needed = 5 - count($popular_products);
-    $existing_ids = array_column($popular_products, 'product_id');
+    $needed = max(0, $limit - count($popular_products));
 
-    $query = "
-      SELECT 
-          id AS product_id,
-          name AS product_name,
-          image AS product_image,
-          price
-      FROM `products` 
-      WHERE `status` = 'active' 
-        AND `type` = ? 
-        AND `category` != 'Add-ons'
-  ";
+    if ($needed > 0) { 
+        $existing_ids = array_column($popular_products, 'product_id');
 
-    $params = [$type];
+        $query = "
+          SELECT 
+              id AS product_id,
+              name AS product_name,
+              image AS product_image,
+              price
+          FROM `products` 
+          WHERE `status` = 'active' 
+            AND `type` = ? 
+            AND `category` != 'Add-ons'
+        ";
 
-    if (!empty($existing_ids)) {
-        $placeholders = implode(',', array_fill(0, count($existing_ids), '?'));
-        $query .= " AND id NOT IN ($placeholders)";
-        $params = array_merge($params, $existing_ids);
+        $params = [$type];
+
+        if (!empty($existing_ids)) {
+            $placeholders = implode(',', array_fill(0, count($existing_ids), '?'));
+            $query .= " AND id NOT IN ($placeholders)";
+            $params = array_merge($params, $existing_ids);
+        }
+
+        // ✅ inject LIMIT safely
+        $query .= " ORDER BY RAND() LIMIT $needed";
+
+        $select_additional = $conn->prepare($query);
+        $select_additional->execute($params);
+        $additional_products = $select_additional->fetchAll(PDO::FETCH_ASSOC);
+
+        $popular_products = array_merge($popular_products, $additional_products);
     }
-
-    // ✅ inject LIMIT safely
-    $query .= " ORDER BY RAND() LIMIT $needed";
-
-    $select_additional = $conn->prepare($query);
-    $select_additional->execute($params);
-    $additional_products = $select_additional->fetchAll(PDO::FETCH_ASSOC);
-
-    $popular_products = array_merge($popular_products, $additional_products);
 }
+
 
 // contact form
 if (!empty($_POST['send'])) {

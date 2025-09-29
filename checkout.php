@@ -1,52 +1,133 @@
 <?php
-
 @include 'config.php';
-
 session_start();
 
-$user_id = $_SESSION['user_id'];
 
-if (!isset($user_id)) {
+if (empty($_SESSION['user_id'])) {
    header('location:login.php');
+   exit;
 }
-;
 
-if (isset($_POST['order'])) {
 
-   $name = filter_var($_POST['name'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-   $number = filter_var( $_POST['number'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-   $email = filter_var($_POST['email'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-   $method = filter_var($_POST['method'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-   $address = filter_var($_POST['address'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-   $placed_on = date('Y-m-d H:i:s');
+$user_id = (int) $_SESSION['user_id'];
 
-   // insert to orders
-   $order_query = $conn->prepare("INSERT INTO `orders`(user_id, name, number, email, method, address, placed_on) VALUES(?,?,?,?,?,?,?)");
-   $order_query->execute([$user_id, $name, $number, $email, $method, $address, $placed_on]);
-   $order_id = $conn->lastInsertId();
 
-   $cart_query = $conn->prepare("SELECT * FROM `cart` WHERE user_id = ?");
-   $cart_query->execute([$user_id]);
-   if ($cart_query->rowCount() > 0) {
-     foreach ($cart_query->fetchAll(PDO::FETCH_ASSOC) as $cart_item) {
-         // insert to order_products
-         $prouct_id = $cart_item['product_id'];
-         $price = $cart_item['price'];
-         $quantity = $cart_item['quantity'];
-         $subtotal = $price * $quantity;
+$select_user = $conn->prepare("SELECT * FROM `users` WHERE id = ?");
+$select_user->execute([$user_id]);
+$user = $select_user->fetch(PDO::FETCH_ASSOC);
 
-         $order_product_query = $conn->prepare("INSERT INTO `order_products`(order_id, product_id, quantity, price, subtotal) VALUES(?,?,?,?,?)");
-         $order_product_query->execute([$order_id, $prouct_id, $quantity, $price, $subtotal]);
+
+
+if (!empty($_POST['checkout'])) {
+
+   try {
+      // Start transaction
+      $conn->beginTransaction();
+
+      // ───── Sanitize input ─────
+      $name = trim($_POST['name'] ?? '');
+      $number = trim($_POST['number'] ?? '');
+      $email = trim($_POST['email'] ?? '');
+      $method = trim($_POST['method'] ?? '');
+      $address = trim($_POST['address'] ?? '');
+
+      // ───── Fetch cart items ─────
+      $stmt = $conn->prepare("
+           SELECT 
+               c.*, 
+               p.name, p.price, p.image, p.type, 
+               p.cup_size, p.ingredients, p.add_ons
+           FROM cart c
+           JOIN products p ON c.product_id = p.id
+           WHERE c.user_id = ?
+       ");
+      $stmt->execute([$user_id]);
+      $cartItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+      // ───── Validate cart ─────
+      if (!$cartItems) {
+         echo json_encode(['success' => false, 'message' => 'Cart is empty']);
+         exit;
       }
 
-      // delete from cart
-      $delete_cart_query = $conn->prepare("DELETE FROM `cart` WHERE user_id = ?");
-      $delete_cart_query->execute([$user_id]);
-      $message[] = 'order placed successfully!';
-   } else {
-      $message[] = 'your cart is empty!';
-   }
 
+
+      // ───── Insert order ─────
+      $stmt = $conn->prepare("
+           INSERT INTO orders 
+               (user_id, name, number, email, method, address, type) 
+           VALUES (?, ?, ?, ?, ?, ?, ?)
+       ");
+      $stmt->execute([$user_id, $name, $number, $email, $method, $address, $type]);
+      $orderId = $conn->lastInsertId();
+
+      // ───── Insert products depending on type ─────
+      $isCoffee = ($type === 'coffee');
+      $query = $isCoffee
+         ? "INSERT INTO order_products 
+                (order_id, product_id, quantity, price, subtotal, ingredients, cup_sizes, add_ons)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+         : "INSERT INTO order_products 
+                (order_id, product_id, quantity, price, subtotal)
+              VALUES (?, ?, ?, ?, ?)";
+      $stmt = $conn->prepare($query);
+
+      foreach ($cartItems as $item) {
+         if ($isCoffee) {
+            $cup_size = json_decode($item['cup_size'] ?? '[]', true);
+            $ingredients = json_decode($item['ingredients'] ?? '[]', true);
+            $add_ons = json_decode($item['add_ons'] ?? '[]', true);
+
+            $stmt->execute([
+               $orderId,
+               $item['product_id'],
+               $item['quantity'],
+               $item['price'],
+               $item['subtotal'],
+               json_encode($ingredients, JSON_UNESCAPED_UNICODE),
+               json_encode($cup_size, JSON_UNESCAPED_UNICODE),
+               json_encode($add_ons, JSON_UNESCAPED_UNICODE)
+            ]);
+         } else {
+            $stmt->execute([
+               $orderId,
+               $item['product_id'],
+               $item['quantity'],
+               $item['price'],
+               $item['subtotal']
+            ]);
+         }
+      }
+
+      // ───── Clear the cart ─────
+      $conn->prepare("DELETE FROM cart WHERE user_id = ? AND type = ?")
+         ->execute([$user_id, $type]);
+
+      // ───── Commit transaction ─────
+      $conn->commit();
+
+      // ───── Respond ─────
+      ob_clean(); // Clean output buffer for JSON response
+      echo json_encode(['success' => true, 'message' => 'Order placed successfully!']);
+      exit;
+
+   } catch (Exception $e) {
+      // Rollback on any error
+      if ($conn->inTransaction()) {
+         $conn->rollBack();
+      }
+
+      // Log error if needed: error_log($e->getMessage());
+
+      // Respond with error JSON
+      ob_clean();
+      echo json_encode([
+         'success' => false,
+         'message' => 'Something went wrong while placing your order. Please try again.',
+         'error' => $e->getMessage() // remove in production
+      ]);
+      exit;
+   }
 }
 
 ?>
@@ -58,127 +139,122 @@ if (isset($_POST['order'])) {
    <meta charset="UTF-8">
    <meta http-equiv="X-UA-Compatible" content="IE=edge">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>checkout</title>
+   <title>Checkout | Kape Milagrosa
+   </title>
+   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 
-   <!-- font awesome cdn link  -->
-   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-
-   <!-- custom css file link  -->
-   <link rel="stylesheet" href="css/style.css">
-
+   <link rel="stylesheet" href="css/new_style.css">
 </head>
 
-<body>
-
+<body class="min-h-screen font-sans text-gray-900">
    <?php include 'header.php'; ?>
 
-   <section class="display-orders">
+   <main>
 
-      <?php
-      $cart_grand_total = 0;
-      $select_cart_items = $conn->prepare("SELECT * FROM `cart` WHERE user_id = ?");
-      $select_cart_items->execute([$user_id]);
-      if ($select_cart_items->rowCount() > 0) {
-         while ($fetch_cart_items = $select_cart_items->fetch(PDO::FETCH_ASSOC)) {
-            $cart_total_price = ($fetch_cart_items['price'] * $fetch_cart_items['quantity']);
-            $cart_grand_total += $cart_total_price;
-            ?>
-            <p> <?= $fetch_cart_items['name']; ?>
-               <span>(<?= '₱' . $fetch_cart_items['price'] . ' x ' . $fetch_cart_items['quantity']; ?>)</span>
-            </p>
-            <?php
-         }
-      } else {
-         echo '<p class="empty">your cart is empty!</p>';
-      }
-      ?>
-      <div class="grand-total">grand total : <span>₱<?= $cart_grand_total; ?></span></div>
-      <section class="checkout-orders">
+      <section class="mt-30">
+         <div class="max-w-4xl mx-auto mb-10 p-6 bg-white rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold mb-6 text-center text-color">Checkout</h2>
+            <form action="" method="POST" class="space-y-4">
 
-
-         <form action="" method="POST">
-
-            <h3>Place your order</h3>
-
-            <div class="flex">
-               <div class="inputBox">
-                  <span>Name :</span>
-                  <input type="text" name="name" placeholder="" class="box" required>
+               <div>
+                  <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+                  <input type="text" name="name" id="name" required value="<?= htmlspecialchars($user['name'] ?? '') ?>"
+                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
                </div>
-               <div class="inputBox">
-                  <span>Number :</span>
-                  <input type="number" name="number" placeholder="" class="box" required>
+               <div>
+                  <label for="number" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                  <input type="text" name="number" id="number" required
+                     value="<?= htmlspecialchars($user['number'] ?? '') ?>"
+                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
                </div>
-               <div class="inputBox">
-                  <span>Email :</span>
-                  <input type="email" name="email" placeholder="" class="box" required>
+               <div>
+                  <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                  <input type="email" name="email" id="email" required
+                     value="<?= htmlspecialchars($user['email'] ?? '') ?>"
+                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
                </div>
-               <div class="inputBox">
-                  <span>Payment Method :</span>
-                  <select name="method" class="box" id="paymentMethod" required>
-                     <option value="">Select Payment Method</option>
+               <div>
+                  <label for="method" class="block text-sm font-medium text-gray-700">Payment Method</label>
+                  <select name="method" id="method" required
+                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                     <option value="">Select a payment method</option>
                      <option value="cash on delivery">Cash on Delivery</option>
-                     <option value="gcash">Gcash</option>
-                     <option value="paypal">Paypal</option>
+                     <option value="gcash">G Cash</option>
+                     <option value="paypal">PayPal</option>
                   </select>
                </div>
-               <div class="inputBox">
-                  <span>Address :</span>
-                  <input type="text" name="address" placeholder="" class="box" required>
+               <div id="qrcode" class="text-center">
+
                </div>
-               <div class="inputBox">
-                  <span>City :</span>
-                  <input type="text" name="city" placeholder="" class="box" required>
+               <div>
+                  <label for="address" class="block text-sm font-medium text-gray-700">Address</label>
+                  <textarea name="address" id="address" rows="3" required
+                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                </div>
-               <div class="inputBox">
-                  <span>Zip Code :</span>
-                  <input type="number" min="0" name="pin_code" placeholder="e.g. 123456" class="box" required>
+               <div class="flex justify-end">
+                  <button type="submit" name="checkout"
+                     class="inline-block bg-color text-white px-6 py-2 rounded-md hover:bg-hover-color focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                     Place Order
+                  </button>
                </div>
-            </div>
-
-            <!-- QR Code Display Section -->
-            <div id="paymentQRCode" style="display: none; text-align: center;">
-               <p id="qrText" style="margin-bottom: 5px;"></p>
-               <img id="qrImage" src="" alt="Payment QR Code" style="max-width: 200px;">
-            </div>
-
-
-            <input type="submit" name="order" class="btn <?= ($cart_grand_total > 1) ? '' : 'disabled'; ?>"
-               value="place order">
-
-         </form>
-
+            </form>
+         </div>
 
       </section>
+   </main>
+   <?php include 'footer.php'; ?>
 
-
-
-
-      <script src="js/script.js"></script>
+   <!-- sweet alert -->
+   <script src=" https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+   <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
+   <?php if (!empty($alert)): ?>
       <script>
-         document.getElementById('paymentMethod').addEventListener('change', function () {
-            var qrCodeSection = document.getElementById('paymentQRCode');
-            var qrImage = document.getElementById('qrImage');
-            var qrText = document.getElementById('qrText');
-
-            if (this.value === "gcash") {
-               qrCodeSection.style.display = "block";
-               qrImage.src = "images/gcash.png"; // Replace with actual GCash QR image path
-               qrText.innerText = "Scan the QR code below to complete payment.";
-            } else if (this.value === "paypal") {
-               qrCodeSection.style.display = "block";
-               qrImage.src = "images/paypal.jpg"; // Replace with actual PayPal QR image path
-               qrText.innerText = "Scan the QR code below to complete payment.";
-            } else {
-               qrCodeSection.style.display = "none";
-               qrImage.src = "";
-               qrText.innerText = "";
-            }
+         document.addEventListener('DOMContentLoaded', () => {
+            Swal.fire({
+               icon: '<?= $alert['type'] ?>',
+               title: '<?= $alert['message'] ?>',
+               showConfirmButton: false,
+               timer: 1500
+            });
          });
-
       </script>
+   <?php endif; ?>
 
+   <script>
+      document.addEventListener('DOMContentLoaded', () => {
+         const methodSelect = document.getElementById('method');
+         const qrCodeDiv = document.getElementById('qrcode');
 
+         methodSelect.addEventListener('change', () => {
+            const selectedMethod = methodSelect.value;
+            const message = document.createElement('p');
+
+            message.classList.add('text-center', 'text-sm', 'text-gray-600');
+            qrCodeDiv.innerHTML = '';
+
+            if (selectedMethod === 'gcash') {
+               const qrImg = document.createElement('img');
+               qrImg.src = "images/gcash.png";
+               qrImg.alt = 'GCash QR Code';
+               qrImg.classList.add('w-32', 'h-32', 'mx-auto', 'my-4');
+               qrCodeDiv.appendChild(qrImg);
+
+               message.textContent = 'Scan the GCash QR code to pay.';
+            } else if (selectedMethod === 'paypal') {
+               const qrImg = document.createElement('img');
+               qrImg.src = "images/paypal.jpg";
+               qrImg.alt = 'PayPal QR Code';
+               qrImg.classList.add('w-32', 'h-32', 'mx-auto', 'my-4');
+               qrCodeDiv.appendChild(qrImg);
+
+               message.textContent = 'Scan the PayPal QR code to pay.';
+            } else {
+               message.textContent = '';
+            }
+            qrCodeDiv.appendChild(message);
+         });
+      });
+   </script>
 </body>
 
 </html>

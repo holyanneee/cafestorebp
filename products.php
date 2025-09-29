@@ -148,7 +148,8 @@ if (isset($_SESSION['user_id'])) {
                             value="<?= htmlspecialchars($search); ?>"
                             class="h-10 rounded border-gray-300 text-sm px-3" />
                         <!-- reset btn -->
-                        <a href="products.php" class="h-10 rounded bg-red-100 px-4 py-2 text-sm text-red-700 hover:bg-red-200">Reset</a>
+                        <a href="products.php"
+                            class="h-10 rounded bg-red-100 px-4 py-2 text-sm text-red-700 hover:bg-red-200">Reset</a>
                     </form>
                 </div>
 
@@ -268,9 +269,26 @@ if (isset($_SESSION['user_id'])) {
             const initialSort = sortSelect.value;
             const initialSearch = searchInput.value;
 
+            let filterTimeout = null;
+
             function checkFilters() {
-                if (typeSelect.value !== initialType || sortSelect.value !== initialSort || searchInput.value !== initialSearch) {
-                    // Submit the form
+                const hasChanged =
+                    typeSelect.value !== initialType ||
+                    sortSelect.value !== initialSort ||
+                    searchInput.value !== initialSearch;
+
+                if (!hasChanged) return;
+
+                // Clear any previous timeout
+                if (filterTimeout) clearTimeout(filterTimeout);
+
+                // If only typing changed (debounce search)
+                if (searchInput.value !== initialSearch) {
+                    filterTimeout = setTimeout(() => {
+                        filterForm.submit();
+                    }, 500); // delay 500ms
+                } else {
+                    // If dropdown changed, submit immediately
                     filterForm.submit();
                 }
             }
@@ -377,7 +395,7 @@ if (isset($_SESSION['user_id'])) {
             });
         });
     </script>
-   
+
 </body>
 
 </html>
