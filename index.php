@@ -274,85 +274,88 @@ if (!empty($_POST['send'])) {
     <?php include 'header.php'; ?>
 
     <main>
-        <section class="page-bg relative">
-            <div
-                class="mx-auto w-screen max-w-screen-xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-32 h-screen flex items-center">
-                <div class="max-w-prose text-left">
-                    <!-- Main Heading -->
-                    <h1 class="text-4xl font-bold text-white sm:text-5xl">
-                        Enjoy Every Sip
-                    </h1>
+    <section class="page-bg relative">
+  <div
+    class="mx-auto w-screen max-w-screen-xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-32 h-screen flex items-center">
+    <div class="max-w-prose text-left">
+      <!-- Main Heading -->
+      <h1 class="text-4xl font-bold text-white sm:text-5xl">
+        Enjoy Every Sip
+      </h1>
 
-                    <!-- Subheading -->
-                    <p class="mt-4 text-xl text-white sm:text-2xl">
-                        Discover the Best Beverages for You
-                    </p>
+      <!-- Subheading -->
+      <p class="mt-4 text-xl text-white sm:text-2xl">
+        Discover the Best Beverages for You
+      </p>
 
-                    <!-- Description -->
-                    <p class="mt-4 text-base text-pretty text-white sm:text-lg/relaxed">
-                        Explore our wide range of drinks, from frappes to milk teas, fruit sodas, and more.
-                    </p>
+      <!-- Description -->
+      <p class="mt-4 text-base text-pretty text-white sm:text-lg/relaxed">
+        Explore our wide range of drinks, from frappes to milk teas, fruit sodas, and more.
+      </p>
 
-                    <!-- Buttons -->
-                    <?php
+      <!-- Buttons -->
+      <div class="mt-4 flex gap-4 sm:mt-6">
+        <!-- Primary Button -->
+        <a class="inline-block rounded border-color bg-color px-5 py-3 font-medium text-white shadow-sm transition-colors bg-hover-color"
+          href="products.php">
+          Order Now
+        </a>
 
-                    ?>
-                    <div class="mt-4 flex gap-4 sm:mt-6">
-                        <!-- Primary Button -->
-                        <a class="inline-block rounded border-color bg-color px-5 py-3 font-medium text-white shadow-sm transition-colors bg-hover-color"
-                            href="products.php">
-                            Order Now
-                        </a>
+        <!-- Secondary Button -->
+        <a class="inline-block rounded border border-gray-200 px-5 py-3 font-medium text-gray-100 shadow-sm transition-colors hover:bg-gray-50 text-hover-color"
+          href="about.php">
+          Learn More
+        </a>
+      </div>
+    </div>
+  </div>
 
-                        <!-- Secondary Button -->
-                        <a class="inline-block rounded border border-gray-200 px-5 py-3 font-medium text-gray-100 shadow-sm transition-colors hover:bg-gray-50 text-hover-color"
-                            href="about.php">
-                            Learn More
-                        </a>
-                    </div>
+  <!-- Top Categories -->
+  <div class="absolute bottom-0 w-full bg-white/30 backdrop-blur-sm py-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+      
+      <!-- Heading -->
+      <div class="flex items-center justify-center text-center lg:text-left lg:col-span-1">
+        <!-- Mobile/Tablet Horizontal Title -->
+        <h2 class="text-2xl font-bold text-color sm:text-3xl lg:hidden">
+          Top Categories
+        </h2>
 
-                </div>
+        <!-- Desktop Vertical Title -->
+        <h2 class="hidden lg:block text-4xl font-bold sm:text-3xl text-color [writing-mode:vertical-rl] rotate-180">
+          Top Categories
+        </h2>
+      </div>
+
+      <!-- Categories Grid -->
+      <div class="sm:col-span-1 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <?php foreach ($top_categories as $top_category): ?>
+          <a href="products.php?category=<?= $top_category['name'] ?>"
+            class="relative block overflow-hidden rounded group border border-white/50 bg-white/30 backdrop-blur-sm">
+
+            <img src="images/<?= htmlspecialchars($top_category['image'] ?: 'default.jpg') ?>"
+              alt="<?= htmlspecialchars($top_category['name']) ?>"
+              class="absolute inset-0 h-full w-full object-cover opacity-75 transition-opacity group-hover:opacity-50" />
+
+            <div class="relative h-48 p-4 sm:p-6 lg:p-8 flex flex-col justify-end">
+              <p class="text-xl font-bold text-color sm:text-2xl">
+                <?= htmlspecialchars($top_category['name']) ?>
+              </p>
+
+              <div
+                class="translate-y-8 opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100 mt-2">
+                <p class="text-sm text-white">
+                  <?= htmlspecialchars($top_category['description'] ?? 'Lorem ipsum dolor sit amet.') ?>
+                </p>
+              </div>
             </div>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </div>
+</section>
 
-            <div class="absolute bottom-0 w-full bg-white/30 backdrop-blur-sm py-8">
-                <div class="grid grid-cols-1 gap-4 lg:grid-cols-4 h-[300px]">
-                    <div class="lg:col-span-1 h-full">
-                        <div class="flex h-full items-center justify-center rounded text-color">
-                            <h2 class="text-4xl font-bold sm:text-3xl [writing-mode:vertical-rl] rotate-180">
-                                Top Categories
-                            </h2>
-                        </div>
-                    </div>
-
-                    <div class="lg:col-span-3 grid gap-4 sm:grid-cols-3">
-                        <?php foreach ($top_categories as $top_category): ?>
-                            <a href="products.php?category=<?= $top_category['name'] ?>"
-                                class="relative block overflow-hidden rounded group border border-white/50 bg-white/30 backdrop-blur-sm">
-
-                                <img src="images/<?= htmlspecialchars($top_category['image'] ?: 'default.jpg') ?>"
-                                    alt="<?= htmlspecialchars($top_category['name']) ?>"
-                                    class="absolute inset-0 h-full w-full object-cover opacity-75 transition-opacity group-hover:opacity-50" />
-
-                                <div class="relative h-48 p-4 sm:p-6 lg:p-8 flex flex-col justify-end">
-
-
-                                    <p class="text-xl font-bold text-color sm:text-2xl">
-                                        <?= htmlspecialchars($top_category['name']) ?>
-                                    </p>
-
-                                    <div
-                                        class="translate-y-8 opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100 mt-2">
-                                        <p class="text-sm text-white">
-                                            <?= htmlspecialchars($top_category['description'] ?? 'Lorem ipsum dolor sit amet.') ?>
-                                        </p>
-                                    </div>
-                                </div>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </div>
-        </section>
         <section class="my-10">
             <div class="mx-auto max-w-screen-xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
                 <header class="text-center">

@@ -28,6 +28,61 @@ $cart_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Calculate total products (considering quantities)
 $total_products = count($cart_items) + (array_sum(array_column($cart_items, 'quantity')) - count($cart_items));
 
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $action = $_POST['action'] ?? '';
+  if ($action === 'remove_from_cart') {
+    $cart_id = isset($_POST['cart_id']) ? (int) $_POST['cart_id'] : 0;
+    if ($cart_id > 0) {
+      // Verify ownership before deletion
+      $verifyStmt = $conn->prepare("SELECT * FROM cart WHERE id = ? AND user_id = ? LIMIT 1");
+      $verifyStmt->execute([$cart_id, $user_id]);
+      $cartItem = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+      if ($cartItem) {
+        $delStmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
+        $delStmt->execute([$cart_id, $user_id]);
+        $_SESSION['alert'] = ['type' => 'success', 'message' => 'Item removed from cart!'];
+      } else {
+        $_SESSION['alert'] = ['type' => 'error', 'message' => 'Item not found in your cart.'];
+      }
+    } else {
+      $_SESSION['alert'] = ['type' => 'error', 'message' => 'Invalid cart item.'];
+    }
+  }
+
+  if ($action === 'update_cart_item') {
+    $cart_id = isset($_POST['cart_id']) ? (int) $_POST['cart_id'] : 0;
+    $quantity = isset($_POST['quantity']) ? max(1, (int) $_POST['quantity']) : 1; // Minimum quantity of 1
+    if ($cart_id > 0) {
+      // Verify ownership before update
+      $verifyStmt = $conn->prepare("SELECT * FROM cart WHERE id = ? AND user_id = ? LIMIT 1");
+      $verifyStmt->execute([$cart_id, $user_id]);
+      $cartItem = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+      if ($cartItem) {
+        // Fetch product price
+        $productStmt = $conn->prepare("SELECT price FROM products WHERE id = ? LIMIT 1");
+        $productStmt->execute([$cartItem['product_id']]);
+        $product = $productStmt->fetch(PDO::FETCH_ASSOC);
+        if ($product) {
+          $newSubtotal = $product['price'] * $quantity; // or use cup price if coffee
+          $updStmt = $conn->prepare("UPDATE cart SET quantity = ?, subtotal = ? WHERE id = ? AND user_id = ?");
+          $updStmt->execute([$quantity, $newSubtotal, $cart_id, $user_id]);
+          $_SESSION['alert'] = ['type' => 'success', 'message' => 'Cart updated successfully!'];
+        } else {
+          $_SESSION['alert'] = ['type' => 'error', 'message' => 'Product not found.'];
+        }
+      } else {
+        $_SESSION['alert'] = ['type' => 'error', 'message' => 'Item not found in your cart.'];
+      }
+    } else {
+      $_SESSION['alert'] = ['type' => 'error', 'message' => 'Invalid cart item.'];
+    }
+  }
+
+  // Redirect to avoid form resubmission
+  header('Location: cart.php?type=' . urlencode($type));
+  exit;
+}
 ?>
 
 <!DOCTYPE html>
@@ -56,7 +111,9 @@ $total_products = count($cart_items) + (array_sum(array_column($cart_items, 'qua
             <h1 class="text-xl text-color font-bold text-gray-900 sm:text-3xl">Your Cart</h1>
             <form method="get" class="flex flex-wrap gap-3" id="filters">
               <!-- Type Filter -->
-              <select name="type" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5" id="type">
+              <select name="type"
+                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
+                id="type">
                 <option value="coffee" <?= $type === 'coffee' ? 'selected' : ''; ?>>Coffee</option>
                 <option value="religious" <?= $type === 'religious' ? 'selected' : ''; ?>>Religious Items
                 </option>
@@ -73,25 +130,16 @@ $total_products = count($cart_items) + (array_sum(array_column($cart_items, 'qua
                   foreach ($cart_items as $item):
                     $subtotal = $item['price'] * $item['quantity'];
                     $total += $subtotal;
-                    if ($item['type'] === 'coffee') {
+                    $isTypeCoffee = $item['type'] === 'coffee';
+                    if ($isTypeCoffee) {
                       $product_cup_sizes = isset($item['product_cup_sizes']) ? json_decode($item['product_cup_sizes'], true) : [];
                       $cup_size = isset($item['cup_size']) ? strtolower(json_decode($item['cup_size'], true)['size']) : 'regular';
                       $cup_size_price = isset($item['cup_size']) ? (json_decode($item['cup_size'], true)['price']) : 0;
-                      $ingredient_choices = isset($item['ingredients']) ? (json_decode($item['ingredients'], true)) : [];
+                      $product_ingredients = isset($item['ingredients']) ? (json_decode($item['ingredients'], true)) : [];
                       $add_ons = isset($item['add_ons']) ? (json_decode($item['add_ons'], true)) : [];
                       $special_instructions = isset($item['special_instruction']) ? htmlspecialchars($item['special_instruction'], ENT_QUOTES) : '';
                     }
                     ?>
-                    <script>
-                      console.log(<?= json_encode($item) ?>);
-                      console.log(<?= json_encode($cup_size) ?>);
-                      console.log(<?= json_encode($cup_size_price) ?>);
-                      console.log(<?= json_encode($product_cup_sizes) ?>);
-                      console.log(<?= json_encode($ingredient_choices) ?>);
-                      console.log(<?= json_encode($add_ons) ?>);
-
-
-                    </script>
                     <li class="flex items-center gap-4">
                       <img src="uploaded_img/<?= htmlspecialchars($item['image']); ?>"
                         alt="<?= htmlspecialchars($item['name']); ?>" class="size-30 rounded-sm object-cover" />
@@ -115,24 +163,22 @@ $total_products = count($cart_items) + (array_sum(array_column($cart_items, 'qua
                       </div>
 
                       <div class="flex items-center gap-2">
+                        <?php if ($isTypeCoffee): ?>
+                          <button command="show-modal" commandfor="customize-<?= $item['id'] ?>"
+                            class="text-gray-600 transition hover:text-blue-600">
+                            <span class="sr-only">Customize item</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                              stroke="currentColor" class="size-4">
+                              <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.93zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                            </svg>
+                          </button>
+                        <?php endif; ?>
+                        <?php include 'cart_customize_modal.php'; ?>
 
-                        <!-- Update Button -->
-                        <button command="show-modal" class="customize-btn text-gray-600 transition hover:text-blue-600"
-                          data-id="<?= $item['id']; ?>" data-product-id="<?= $item['product_id']; ?>"
-                          data-name="<?= htmlspecialchars($item['name']); ?>" data-base="<?= $item['price']; ?>"
-                          data-cup-size="<?= $cup_size; ?>" data-cup-size-price="<?= $cup_size_price; ?>"
-                          data-ingredient-choices='<?= json_encode($ingredient_choices); ?>'
-                          data-add-ons='<?= json_encode($add_ons); ?>' data-quantity="<?= $item['quantity']; ?>"
-                          data-special-instructions="<?= htmlspecialchars($special_instructions); ?>">
-                          <span class="sr-only">Update item</span>
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                            stroke="currentColor" class="size-4">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                              d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.93zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                          </svg>
-                        </button>
-                        <form action="remove_cart.php" method="post">
+                        <form action="" method="post">
                           <input type="hidden" name="cart_id" value="<?= $item['id']; ?>">
+                          <input type="hidden" name="action" value="remove_from_cart">
                           <button type="submit" class="text-gray-600 transition hover:text-red-600">
                             <span class="sr-only">Remove item</span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
@@ -153,9 +199,7 @@ $total_products = count($cart_items) + (array_sum(array_column($cart_items, 'qua
                 <?php endif; ?>
               </ul>
             </div>
-            <!-- 
-                  cart summary
-            -->
+            <!-- cart summary-->
             <div class="rounded-lg border bg-white p-4 shadow-sm">
               <dl class="space-y-1 text-sm text-gray-700">
                 <div class="flex justify-between">
@@ -169,10 +213,14 @@ $total_products = count($cart_items) + (array_sum(array_column($cart_items, 'qua
               </dl>
 
 
-              <div class="mt-4">
+              <div class="mt-5 space-y-2">
                 <a href="checkout.php?type=<?= $type; ?>"
                   class="block w-full rounded-md bg-color px-3 py-2 text-center text-sm font-semibold text-white shadow-xs hover:bg-indigo-500">
                   Proceed to Checkout
+                </a>
+                <a href="orders.php"
+                  class="block w-full rounded-md bg-gray-100 px-3 py-2 text-center text-sm font-semibold text-gray-700 shadow-xs hover:bg-gray-200">
+                  Continue Browsing
                 </a>
               </div>
 
@@ -184,93 +232,24 @@ $total_products = count($cart_items) + (array_sum(array_column($cart_items, 'qua
     </section>
   </main>
 
-  <el-dialog>
-    <dialog id="customize" aria-labelledby="dialog-title"
-      class="fixed inset-0 size-auto max-h-none max-w-none overflow-y-auto bg-transparent backdrop:bg-transparent">
-      <el-dialog-backdrop
-        class="fixed inset-0 bg-gray-500/75 transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"></el-dialog-backdrop>
-      <div tabindex="0"
-        class="flex min-h-full items-end justify-center p-4 text-center focus:outline-none sm:items-center sm:p-0">
-        <el-dialog-panel
-          class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full sm:max-w-lg data-closed:sm:translate-y-0 data-closed:sm:scale-95">
-          <header>
-            <h2 class="text-lg font-medium leading-6 text-gray-900 p-4 border-b">
-              Customize:
-            </h2>
-          </header>
-          <div class="bg-white p-3 sm:p-2">
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-8">
-              <div>
-                <fieldset class="flex flex-col space-x-3">
-                  <legend class="sr-only">Cup Sizes</legend>
-                  <p class="text-sm font-medium text-gray-700 mr-3">Cup Size:</p>
-                  <div id="cup-sizes-container" class="flex flex-wrap gap-2">
 
-                  </div>
-                </fieldset>
-                <fieldset class="mt-4 flex flex-col space-x-3">
-                  <legend class="sr-only">Ingredients</legend>
-                  <p class="text-sm font-medium text-gray-700 mr-3">Ingredients:</p>
-                  <div id="ingredients-container" class="flex flex-wrap gap-2">
-                  </div>
-                </fieldset>
-
-                <div class="mt-4">
-                  <label for="quantity" class="block text-sm font-medium text-gray-700">
-                    Quantity:
-                  </label>
-                  <div class="mt-1">
-                    <input type="number" id="quantity" name="quantity" min="1" value="1"
-                      class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
-                  </div>
-                </div>
-
-                <div class="mt-4">
-                  <label for="special-instructions" class="block text-sm font-medium text-gray-700">
-                    Special Instructions:
-                  </label>
-                  <div class="mt-1">
-                    <textarea id="special-instructions" name="special-instructions" rows="4"
-                      class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                      placeholder="e.g., No sugar, extra hot, etc."></textarea>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <fieldset class="mt-4 flex flex-col space-x-3">
-                  <legend class="sr-only">Add-Ons</legend>
-                  <p class="text-sm font-medium text-gray-700 mr-3">Add-Ons:</p>
-                  <div id="add-ons-container" class="flex flex-wrap gap-2"></div>
-                </fieldset>
-
-              </div>
-            </div>
-
-
-
-
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-            <button type="button" command="close" commandfor="customize"
-              class="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 sm:ml-3 sm:w-auto">
-              Save Changes
-            </button>
-            <button type="button" command="close" commandfor="customize"
-              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto">
-              Cancel
-            </button>
-          </div>
-        </el-dialog-panel>
-      </div>
-    </dialog>
-  </el-dialog>
   <?php include 'footer.php'; ?>
 
   <!-- sweet alert -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
-
-
+  <?php if (!empty($alert)): ?>
+      <script>
+         document.addEventListener('DOMContentLoaded', () => {
+            Swal.fire({
+               icon: '<?= $alert['type'] ?>',
+               title: '<?= $alert['message'] ?>',
+               showConfirmButton: false,
+               timer: 1500
+            });
+         });
+      </script>
+   <?php endif; ?>
 
 </body>
 
