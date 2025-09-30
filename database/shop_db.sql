@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Sep 27, 2025 at 06:21 AM
+-- Generation Time: Sep 30, 2025 at 07:53 AM
 -- Server version: 8.0.30
 -- PHP Version: 8.2.27
 
@@ -39,16 +39,6 @@ CREATE TABLE `cart` (
   `ingredients` json DEFAULT NULL,
   `special_instruction` text COLLATE utf8mb4_general_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `cart`
---
-
-INSERT INTO `cart` (`id`, `user_id`, `product_id`, `quantity`, `type`, `cup_size`, `subtotal`, `add_ons`, `ingredients`, `special_instruction`) VALUES
-(24, 42, 39, 3, 'coffee', '{\"size\": \"Regular\", \"price\": 5}', '610.00', NULL, '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', NULL),
-(25, 42, 38, 1, 'coffee', '{\"size\": \"Regular\", \"price\": 5}', '255.00', NULL, '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', NULL),
-(26, 42, 30, 1, 'coffee', '{\"size\": \"Regular\", \"price\": 5}', '94.00', NULL, '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', NULL),
-(27, 42, 37, 2, 'coffee', '{\"size\": \"Regular\", \"price\": 5}', '200.00', NULL, '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', NULL);
 
 -- --------------------------------------------------------
 
@@ -127,10 +117,10 @@ CREATE TABLE `orders` (
   `method` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
   `address` varchar(500) COLLATE utf8mb4_general_ci NOT NULL,
   `status` enum('pending','received','preparing','pick-up','on the way','completed') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pending',
+  `type` enum('coffee','religious') COLLATE utf8mb4_general_ci NOT NULL,
   `updated_by_cashier` text COLLATE utf8mb4_general_ci,
   `updated_by_barista` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `receipt` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee',
   `is_walk_in` tinyint(1) NOT NULL DEFAULT '0',
   `placed_on` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
@@ -141,10 +131,8 @@ CREATE TABLE `orders` (
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `user_id`, `name`, `number`, `email`, `method`, `address`, `status`, `updated_by_cashier`, `updated_by_barista`, `receipt`, `type`, `is_walk_in`, `placed_on`, `created_at`, `updated_at`) VALUES
-(1, 42, 'Melinda Downs', '09512370553', 'muwybave@mailinator.com', 'Cash on Delivery', 'Lamot 2 Calauan, Laguna\r\nLamot 2 Calauan, Laguna', 'completed', 'admin1', '', 'receipt_38_20250922_144149_68d1602d943b1.pdf', 'online', 0, '2025-09-22 14:41:49', '2025-09-21 13:06:56', '2025-09-22 14:41:49'),
-(2, 38, 'Walk-in Customer', '', '', 'cash', 'N/A', 'completed', 'code and u', 'code and u', 'receipt_38_20250922_143600_68d15ed0a7cfe.pdf', 'coffee', 1, '2025-09-22 14:36:00', '2025-09-21 15:32:19', '2025-09-22 14:36:00'),
-(3, 38, 'Walk-in Customer', '', '', 'cash', 'N/A', 'completed', 'admin1', 'code and u', '', 'coffee', 1, '2025-09-22 13:25:15', '2025-09-22 12:46:09', '2025-09-22 13:25:15');
+INSERT INTO `orders` (`id`, `user_id`, `name`, `number`, `email`, `method`, `address`, `status`, `type`, `updated_by_cashier`, `updated_by_barista`, `receipt`, `is_walk_in`, `placed_on`, `created_at`, `updated_at`) VALUES
+(9, 45, 'Roy Joseph Mendoza Latayan', '09512370553', 'royjosephlatayan16@gmail.com', 'gcash', 'Lamot 2 Calauan, Laguna\r\nLamot 2 Calauan, Laguna', 'completed', 'coffee', NULL, NULL, NULL, 0, '2025-09-30 07:32:41', '2025-09-30 05:59:48', '2025-09-30 07:32:41');
 
 -- --------------------------------------------------------
 
@@ -171,11 +159,7 @@ CREATE TABLE `order_products` (
 --
 
 INSERT INTO `order_products` (`id`, `order_id`, `product_id`, `quantity`, `price`, `subtotal`, `ingredients`, `cup_sizes`, `add_ons`, `created_at`, `updated_at`) VALUES
-(1, 1, 48, 1, '200.00', '200.00', NULL, NULL, NULL, '2025-09-21 13:06:56', '2025-09-21 13:06:56'),
-(2, 1, 47, 1, '150.00', '150.00', NULL, NULL, NULL, '2025-09-21 13:06:56', '2025-09-21 13:06:56'),
-(3, 2, 40, 1, '100.00', '140.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Extra\"}}', '{\"size\":\"Large\",\"price\":20}', '[{\"id\":\"45\",\"name\":\"\\n                           Tapioca Pearls\",\"price\":20}]', '2025-09-21 15:32:19', '2025-09-21 15:32:19'),
-(4, 2, 38, 1, '250.00', '272.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Extra\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"Regular\"}}', '{\"size\":\"Small\",\"price\":2}', '[{\"id\":\"45\",\"name\":\"\\n                           Tapioca Pearls\",\"price\":20}]', '2025-09-21 15:32:19', '2025-09-21 15:32:19'),
-(5, 3, 40, 1, '100.00', '125.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"}}', '{\"size\":\"Small\",\"price\":5}', '[{\"id\":\"45\",\"name\":\"\\n                           Tapioca Pearls\",\"price\":20}]', '2025-09-22 12:46:09', '2025-09-22 12:46:09');
+(7, 9, 37, 1, '100.00', '105.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"Regular\"}}', '{\"size\":\"Regular\",\"price\":5}', '[]', '2025-09-30 05:59:48', '2025-09-30 05:59:48');
 
 -- --------------------------------------------------------
 
@@ -232,14 +216,15 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `user_type`, `image`, `role`) VALUES
-(34, 'code and u', 'admin@gmail.com', '81dc9bdb52d04dc20036dbd8313ed055', 'user', '849e3efc50b82dc788815d2b02d9c7ce.jpg', 'barista'),
-(35, 'dominic', 'yanabaho@gmail.conm', '81dc9bdb52d04dc20036dbd8313ed055', 'barista', 'galaxy.png', 'barista'),
-(36, 'Gay Man', '1234@gmail.com', '81dc9bdb52d04dc20036dbd8313ed055', 'user', 'Groot.jpg', 'admin'),
-(38, 'admin1', 'admin1@gmail.com', '81dc9bdb52d04dc20036dbd8313ed055', 'user', 'Groot.jpg', 'cashier'),
-(39, 'user', 'user@gmail.com', '81dc9bdb52d04dc20036dbd8313ed055', 'user', 'Portgas D Ace.jpg', 'user'),
-(40, 'Keely Dejesus', 'coniv@mailinator.com', 'f3ed11bbdb94fd9ebdefbaf646ab94d3', 'user', '479963487_1521305715207066_7193388786170096206_n.jpg', 'user'),
-(41, 'Leandra Short', 'boxatesut@mailinator.com', '5f4dcc3b5aa765d61d8327deb882cf99', 'user', 'dashboard.jpg', 'user'),
-(42, 'Melinda Downs', 'muwybave@mailinator.com', '5f4dcc3b5aa765d61d8327deb882cf99', 'user', 'Archana+Minev-+15.jpg', 'user');
+(34, 'code and u', 'admin@gmail.com', '$2y$10$JVlPT.omgV1w4u9a4GTMUe3BrTcFP6pV68sdvt9ZblS0dIkOSPZZe', 'user', '849e3efc50b82dc788815d2b02d9c7ce.jpg', 'barista'),
+(35, 'dominic', 'yanabaho@gmail.conm', '$2y$10$JVlPT.omgV1w4u9a4GTMUe3BrTcFP6pV68sdvt9ZblS0dIkOSPZZe', 'barista', 'galaxy.png', 'barista'),
+(36, 'Gay Man', '1234@gmail.com', '$2y$10$JVlPT.omgV1w4u9a4GTMUe3BrTcFP6pV68sdvt9ZblS0dIkOSPZZe', 'user', 'Groot.jpg', 'admin'),
+(38, 'admin1', 'admin1@gmail.com', '$2y$10$JVlPT.omgV1w4u9a4GTMUe3BrTcFP6pV68sdvt9ZblS0dIkOSPZZe', 'user', 'Groot.jpg', 'cashier'),
+(39, 'user', 'user@gmail.com', '$2y$10$JVlPT.omgV1w4u9a4GTMUe3BrTcFP6pV68sdvt9ZblS0dIkOSPZZe', 'user', 'Portgas D Ace.jpg', 'user'),
+(40, 'Keely Dejesus', 'coniv@mailinator.com', '$2y$10$JVlPT.omgV1w4u9a4GTMUe3BrTcFP6pV68sdvt9ZblS0dIkOSPZZe', 'user', '479963487_1521305715207066_7193388786170096206_n.jpg', 'user'),
+(41, 'Leandra Short', 'boxatesut@mailinator.com', '$2y$10$JVlPT.omgV1w4u9a4GTMUe3BrTcFP6pV68sdvt9ZblS0dIkOSPZZe', 'user', 'dashboard.jpg', 'user'),
+(42, 'Melinda Downs1234', 'muwybave@mailinator.com', '$2y$10$JVlPT.omgV1w4u9a4GTMUe3BrTcFP6pV68sdvt9ZblS0dIkOSPZZe', 'user', 'Archana+Minev-+15.jpg', 'user'),
+(45, 'Roy Joseph Mendoza Latayan', 'royjosephlatayan16@gmail.com', '$2y$10$JVlPT.omgV1w4u9a4GTMUe3BrTcFP6pV68sdvt9ZblS0dIkOSPZZe', 'user', '', 'user');
 
 -- --------------------------------------------------------
 
@@ -253,17 +238,6 @@ CREATE TABLE `wishlist` (
   `product_id` int NOT NULL,
   `type` enum('coffee','online') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'coffee'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `wishlist`
---
-
-INSERT INTO `wishlist` (`id`, `user_id`, `product_id`, `type`) VALUES
-(25, 42, 24, 'coffee'),
-(27, 42, 38, 'coffee'),
-(28, 42, 40, 'coffee'),
-(30, 42, 39, 'coffee'),
-(31, 42, 30, 'coffee');
 
 --
 -- Indexes for dumped tables
@@ -334,7 +308,7 @@ ALTER TABLE `wishlist`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT for table `deliveries`
@@ -358,7 +332,7 @@ ALTER TABLE `message`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `order_products`
@@ -376,13 +350,13 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
 
 --
 -- AUTO_INCREMENT for table `wishlist`
 --
 ALTER TABLE `wishlist`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- Constraints for dumped tables

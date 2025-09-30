@@ -7,7 +7,12 @@ if (empty($_SESSION['user_id'])) {
    header('location:login.php');
    exit;
 }
+if (empty($_GET['type'])) {
+   header('location: cart.php');
+   exit;
+}
 
+$type = $_GET['type'];
 
 $user_id = (int) $_SESSION['user_id'];
 
@@ -16,27 +21,25 @@ $select_user = $conn->prepare("SELECT * FROM `users` WHERE id = ?");
 $select_user->execute([$user_id]);
 $user = $select_user->fetch(PDO::FETCH_ASSOC);
 
+$alert = $_SESSION['alert'] ?? [];
+unset($_SESSION['alert']);
 
-
-if (!empty($_POST['checkout'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout'])) {
 
    try {
       // Start transaction
       $conn->beginTransaction();
 
-      // ───── Sanitize input ─────
       $name = trim($_POST['name'] ?? '');
       $number = trim($_POST['number'] ?? '');
       $email = trim($_POST['email'] ?? '');
       $method = trim($_POST['method'] ?? '');
       $address = trim($_POST['address'] ?? '');
 
-      // ───── Fetch cart items ─────
       $stmt = $conn->prepare("
            SELECT 
                c.*, 
-               p.name, p.price, p.image, p.type, 
-               p.cup_size, p.ingredients, p.add_ons
+               p.name, p.price, p.image, p.type
            FROM cart c
            JOIN products p ON c.product_id = p.id
            WHERE c.user_id = ?
@@ -44,26 +47,24 @@ if (!empty($_POST['checkout'])) {
       $stmt->execute([$user_id]);
       $cartItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-      // ───── Validate cart ─────
       if (!$cartItems) {
-         echo json_encode(['success' => false, 'message' => 'Cart is empty']);
+         $_SESSION['alert'] = ['type' => 'error', 'message' => 'Your cart is empty!'];
+         header('location: cart.php');
          exit;
       }
 
 
 
-      // ───── Insert order ─────
       $stmt = $conn->prepare("
            INSERT INTO orders 
-               (user_id, name, number, email, method, address, type) 
-           VALUES (?, ?, ?, ?, ?, ?, ?)
+               (user_id, name, number, email, method, address, type, placed_on) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
        ");
       $stmt->execute([$user_id, $name, $number, $email, $method, $address, $type]);
       $orderId = $conn->lastInsertId();
 
-      // ───── Insert products depending on type ─────
       $isCoffee = ($type === 'coffee');
-      $query = $isCoffee
+      $query = $type === 'coffee'
          ? "INSERT INTO order_products 
                 (order_id, product_id, quantity, price, subtotal, ingredients, cup_sizes, add_ons)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
@@ -86,7 +87,7 @@ if (!empty($_POST['checkout'])) {
                $item['subtotal'],
                json_encode($ingredients, JSON_UNESCAPED_UNICODE),
                json_encode($cup_size, JSON_UNESCAPED_UNICODE),
-               json_encode($add_ons, JSON_UNESCAPED_UNICODE)
+               json_encode($add_ons, JSON_UNESCAPED_UNICODE),
             ]);
          } else {
             $stmt->execute([
@@ -94,21 +95,19 @@ if (!empty($_POST['checkout'])) {
                $item['product_id'],
                $item['quantity'],
                $item['price'],
-               $item['subtotal']
+               $item['subtotal'],
             ]);
          }
       }
 
-      // ───── Clear the cart ─────
       $conn->prepare("DELETE FROM cart WHERE user_id = ? AND type = ?")
          ->execute([$user_id, $type]);
 
-      // ───── Commit transaction ─────
       $conn->commit();
 
-      // ───── Respond ─────
       ob_clean(); // Clean output buffer for JSON response
-      echo json_encode(['success' => true, 'message' => 'Order placed successfully!']);
+      $_SESSION['alert'] = ['type' => 'success', 'message' => 'Order placed successfully!'];
+      header('location:orders.php');
       exit;
 
    } catch (Exception $e) {
@@ -117,15 +116,18 @@ if (!empty($_POST['checkout'])) {
          $conn->rollBack();
       }
 
-      // Log error if needed: error_log($e->getMessage());
-
       // Respond with error JSON
       ob_clean();
+      // $_SESSION['alert'] = ['type' => 'error', 'message' => 'Failed to place order. Please try again.'];
+      // for debugging purposes, we can show the actual error message
+      // $_SESSION['alert'] = ['type' => 'error', 'message' => $e->getMessage()];
+      // header('location: checkout.php');
       echo json_encode([
          'success' => false,
          'message' => 'Something went wrong while placing your order. Please try again.',
          'error' => $e->getMessage() // remove in production
       ]);
+
       exit;
    }
 }
@@ -150,12 +152,11 @@ if (!empty($_POST['checkout'])) {
    <?php include 'header.php'; ?>
 
    <main>
-
       <section class="mt-30">
          <div class="max-w-4xl mx-auto mb-10 p-6 bg-white rounded-lg shadow-md">
             <h2 class="text-2xl font-bold mb-6 text-center text-color">Checkout</h2>
             <form action="" method="POST" class="space-y-4">
-
+               <input type="hidden" name="checkout" value="1">
                <div>
                   <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
                   <input type="text" name="name" id="name" required value="<?= htmlspecialchars($user['name'] ?? '') ?>"
@@ -179,7 +180,7 @@ if (!empty($_POST['checkout'])) {
                      class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
                      <option value="">Select a payment method</option>
                      <option value="cash on delivery">Cash on Delivery</option>
-                     <option value="gcash">G Cash</option>
+                     <option value="gcash">GCash</option>
                      <option value="paypal">PayPal</option>
                   </select>
                </div>

@@ -127,14 +127,14 @@ if (isset($_SESSION['user_id'])) {
 
                     <form method="get" class="flex flex-wrap gap-3" id="filters">
                         <!-- Type Filter -->
-                        <select name="type" class="h-10 rounded border-gray-300 text-sm" id="type">
+                        <select name="type" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5" id="type">
                             <option value="coffee" <?= $type === 'coffee' ? 'selected' : ''; ?>>Coffee</option>
                             <option value="religious" <?= $type === 'religious' ? 'selected' : ''; ?>>Religious Items
                             </option>
                         </select>
 
                         <!-- Sort -->
-                        <select name="sort" class="h-10 rounded border-gray-300 text-sm" id="sort">
+                        <select name="sort" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5" id="sort">
                             <option value="name_asc" <?= $sort === 'name_asc' ? 'selected' : ''; ?>>Name A–Z</option>
                             <option value="name_desc" <?= $sort === 'name_desc' ? 'selected' : ''; ?>>Name Z–A</option>
                             <option value="price_asc" <?= $sort === 'price_asc' ? 'selected' : ''; ?>>Price Low–High
@@ -146,10 +146,10 @@ if (isset($_SESSION['user_id'])) {
                         <!-- Search -->
                         <input type="text" name="search" id="serach" placeholder="Search products..."
                             value="<?= htmlspecialchars($search); ?>"
-                            class="h-10 rounded border-gray-300 text-sm px-3" />
+                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 px-3" />
                         <!-- reset btn -->
                         <a href="products.php"
-                            class="h-10 rounded bg-red-100 px-4 py-2 text-sm text-red-700 hover:bg-red-200">Reset</a>
+                            class="h-10 rounded bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200">Reset</a>
                     </form>
                 </div>
 

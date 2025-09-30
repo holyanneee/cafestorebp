@@ -8,17 +8,21 @@ if (!isset($_SESSION['user_id'])) {
   header('Location: login.php');
   exit;
 }
+$alert = $_SESSION['alert'] ?? [];
+unset($_SESSION['alert']);
 
 // get cart items from based on user_id
 $user_id = $_SESSION['user_id'];
 $cart_items = [];
 
+$type = isset($_GET['type']) && in_array($_GET['type'], ['coffee', 'religious']) ? $_GET['type'] : 'coffee';
+
 $stmt = $conn->prepare("SELECT cart.*, products.name, products.price, products.image, products.cup_sizes as product_cup_sizes, products.type
                                FROM cart 
                                JOIN products ON cart.product_id = products.id 
-                               WHERE cart.user_id = ?
+                               WHERE cart.user_id = ? AND cart.type = ?
                            ORDER BY cart.id DESC");
-$stmt->execute([$user_id]);
+$stmt->execute([$user_id, $type]);
 $cart_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Calculate total products (considering quantities)
@@ -50,6 +54,14 @@ $total_products = count($cart_items) + (array_sum(array_column($cart_items, 'qua
           class="mx-auto max-w-screen-xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8 <?= count($cart_items) === 0 || count($cart_items) < 3 ? 'min-h-[60vh]' : '' ?>">
           <header class="flex items-center justify-between">
             <h1 class="text-xl text-color font-bold text-gray-900 sm:text-3xl">Your Cart</h1>
+            <form method="get" class="flex flex-wrap gap-3" id="filters">
+              <!-- Type Filter -->
+              <select name="type" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5" id="type">
+                <option value="coffee" <?= $type === 'coffee' ? 'selected' : ''; ?>>Coffee</option>
+                <option value="religious" <?= $type === 'religious' ? 'selected' : ''; ?>>Religious Items
+                </option>
+              </select>
+            </form>
           </header>
 
           <div class="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-8 mt-8">
@@ -148,17 +160,17 @@ $total_products = count($cart_items) + (array_sum(array_column($cart_items, 'qua
               <dl class="space-y-1 text-sm text-gray-700">
                 <div class="flex justify-between">
                   <dt>Total Products</dt>
-                  <dd class="font-semibold text-gray-900"><?= number_format($total_products); ?></dd>
+                  <dd class="font-semibold text-gray-900"><?= number_format($total_products ?? 0); ?></dd>
                 </div>
                 <div class="flex justify-between">
                   <dt>Total</dt>
-                  <dd class="font-semibold text-gray-900">₱<?= number_format($total, 2); ?></dd>
+                  <dd class="font-semibold text-gray-900">₱<?= number_format($total ?? 0, 2); ?></dd>
                 </div>
               </dl>
 
 
               <div class="mt-4">
-                <a href="checkout.php"
+                <a href="checkout.php?type=<?= $type; ?>"
                   class="block w-full rounded-md bg-color px-3 py-2 text-center text-sm font-semibold text-white shadow-xs hover:bg-indigo-500">
                   Proceed to Checkout
                 </a>

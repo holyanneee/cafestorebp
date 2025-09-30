@@ -1,43 +1,29 @@
 <?php
 @include 'config.php';
-session_start();
 require_once 'helpers\FormatHelper.php';
-require 'enums/OrderStatusEnum.php';
-use Enums\OrderStatusEnum;
-use Helpers\FormatHelper;
+require_once 'enums/OrderStatusEnum.php';
 
+
+use Helpers\FormatHelper;
+use Enums\OrderStatusEnum;
+
+
+session_start();
 $admin_id = $_SESSION['admin_id'] ?? null;
 if (!$admin_id) {
     header('location:login.php');
     exit();
 }
 
-// Handle AJAX update
-if (isset($_POST['update_order']) && isset($_POST['is_ajax'])) {
-    $order_id = $_POST['order_id'];
-    $update_payment = $_POST['update_payment'];
-    $update_payment = filter_var($update_payment, FILTER_SANITIZE_STRING);
 
-    $update_orders = $conn->prepare("UPDATE `orders` SET status = ? WHERE id = ?");
-    $update_orders->execute([$update_payment, $order_id]);
-
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => true,
-        'order_id' => $order_id,
-        'new_status' => $update_payment,
-        'new_status_text' => ucfirst($update_payment)
-    ]);
-    exit();
-}
 
 // Handle regular form submission
 if (isset($_POST['update_order'])) {
     $order_id = $_POST['order_id'];
-    $update_payment = $_POST['update_payment'];
-    $update_payment = filter_var($update_payment, FILTER_SANITIZE_STRING);
+    $status = $_POST['status'];
+    $status = filter_var($status, FILTER_SANITIZE_STRING);
     $update_orders = $conn->prepare("UPDATE `orders` SET status = ? WHERE id = ?");
-    $update_orders->execute([$update_payment, $order_id]);
+    $update_orders->execute([$status, $order_id]);
     header('location:admin_orders.php');
     exit();
 }

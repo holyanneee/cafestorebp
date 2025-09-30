@@ -13,6 +13,8 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
+$alert = $_SESSION['alert'] ?? [];
+unset($_SESSION['alert']);
 
 $type = isset($_GET['type']) && in_array($_GET['type'], ['coffee', 'religious']) ? $_GET['type'] : '';
 $search = trim($_GET['search'] ?? '');
@@ -34,7 +36,8 @@ $stmt = $conn->prepare(" SELECT
                 o.email,
                 o.placed_on,
                 o.status,
-                o.type,
+                  o.address,
+                  o.type,
                 GROUP_CONCAT(op.product_id) AS product_ids,
                 (SELECT SUM(op.subtotal) FROM `order_products` op WHERE op.order_id = o.id) AS total_price
             FROM `orders` o 
@@ -69,7 +72,7 @@ $orders = FormatHelper::formatOrders($stmt->fetchAll(PDO::FETCH_ASSOC), $conn);
    <?php include 'header.php'; ?>
 
    <main>
-      <section class="mt-20 <?= count($orders) <3 ? 'min-h-[60vh]' : ''; ?>">
+      <section class="mt-20 <?= count($orders) < 3 ? 'min-h-[60vh]' : ''; ?>">
          <div class="mx-auto max-w-screen-xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
             <header class="flex items-center justify-between">
                <h1 class="text-xl font-bold text-color sm:text-3xl">Your Orders</h1>
@@ -87,7 +90,7 @@ $orders = FormatHelper::formatOrders($stmt->fetchAll(PDO::FETCH_ASSOC), $conn);
                      value="<?= htmlspecialchars($search); ?>" class="h-10 rounded border-gray-300 text-sm px-3" />
                   <!-- reset btn -->
                   <a href="products.php"
-                     class="h-10 rounded bg-red-100 px-4 py-2 text-sm text-red-700 hover:bg-red-200">Reset</a>
+                     class="h-10 rounded bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200">Reset</a>
                </form>
             </header>
 

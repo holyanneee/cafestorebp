@@ -2,26 +2,26 @@
 include 'config.php';
 session_start();
 
-// Show alert from previous request
-$alert = $_SESSION['alert'] ?? null;
+
+$alert = $_SESSION['alert'] ?? [];
 unset($_SESSION['alert']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
-    // 🔹 Sanitize inputs
+
     $name  = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-    $pass  = $_POST['password'] ?? '';              // ✅ matches form name
+    $password  = $_POST['password'] ?? '';         
     $confirm_password = $_POST['confirm_password'] ?? '';
     $role  = isset($_POST['is_admin']) ? 'admin' : 'user';
 
-    // 🔹 File upload
+
     $image_name = $_FILES['image']['name'] ?? '';
     $image_size = $_FILES['image']['size'] ?? 0;
     $image_tmp  = $_FILES['image']['tmp_name'] ?? '';
     $image_name = basename(filter_var($image_name, FILTER_SANITIZE_FULL_SPECIAL_CHARS));
     $image_path = 'uploaded_img/' . $image_name;
 
-    // 🔹 Email exists?
+
     $select = $conn->prepare("SELECT 1 FROM `users` WHERE email = ?");
     $select->execute([$email]);
     if ($select->rowCount() > 0) {
@@ -30,33 +30,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
         exit;
     }
 
-    // 🔹 Passwords match?
-    if ($pass !== $confirm_password) {
+
+    if ($password !== $confirm_password) {
         $_SESSION['alert'] = ['type' => 'error', 'message' => 'Passwords do not match!'];
         header("Location: register.php");
         exit;
     }
 
-    // 🔹 Image size check
+
     if ($image_size > 2000000) {
         $_SESSION['alert'] = ['type' => 'error', 'message' => 'Image size is too large!'];
         header("Location: register.php");
         exit;
     }
 
-    // 🔹 Hash password
-    $hashedPassword = password_hash($pass, PASSWORD_DEFAULT);
 
-    // 🔹 Insert user
+    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+
     $insert = $conn->prepare("INSERT INTO `users` (name, email, password, image, role) VALUES (?, ?, ?, ?, ?)");
     $insert->execute([$name, $email, $hashedPassword, $image_name, $role]);
 
-    // 🔹 Move uploaded file only if exists
+
     if ($insert && $image_tmp) {
         move_uploaded_file($image_tmp, $image_path);
     }
 
-    // 🔹 Success
+
     $_SESSION['alert'] = ['type' => 'success', 'message' => 'Registration successful! Please log in.'];
     header('Location: login.php');
     exit;

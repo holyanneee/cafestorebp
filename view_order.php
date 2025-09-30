@@ -48,6 +48,9 @@ if (empty($order)) {
 
 $statusEnumCases = OrderStatusEnum::cases();
 
+
+$isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Completed->value && $order['receipt'] !== null);
+
 ?>
 
 
@@ -83,10 +86,13 @@ $statusEnumCases = OrderStatusEnum::cases();
                         <a href="orders.php"
                             class="inline-block rounded bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring active:bg-gray-400">Back
                             to Orders</a>
-                        <a href="receipt.php?order_id=<?= htmlspecialchars($order['order_id']) ?>" target="_blank"
-                            class="inline-block rounded bg-color px-4 py-2 text-sm font-medium text-white bg-hover-color focus:outline-none focus:ring">
-                            Download Receipt
-                        </a>
+                        <?php if ($isOrderCompleted): ?>
+                            <a href="generate_invoice.php?order_id=<?= htmlspecialchars($order['order_id']) ?>"
+                                class="inline-block rounded bg-color px-4 py-2 text-sm font-medium text-white hover:bg-hover-color focus:outline-none focus:ring active:bg-indigo-600">
+                                Download
+                                Invoice</a>
+
+                        <?php endif; ?>
 
                     </div>
 
@@ -182,7 +188,7 @@ $statusEnumCases = OrderStatusEnum::cases();
                                             <div class="text-sm font-medium text-gray-900">
                                                 <?= $product['name'] ?>
                                             </div>
-                                            <?php if ($product['type'] === 'coffee' && !empty($product['ingredients'])): ?>
+                                            <?php if ($order['type'] === 'coffee' && !empty($product['ingredients'])): ?>
                                                 <div class="text-sm text-gray-500 mt-1">
                                                     <?php foreach ($product['ingredients'] as $ingredient): ?>
                                                         <div>
@@ -193,7 +199,7 @@ $statusEnumCases = OrderStatusEnum::cases();
                                                 </div>
                                             <?php endif; ?>
 
-                                            <?php if ($product['type'] === 'coffee' && !empty($product['cup_sizes'])): ?>
+                                            <?php if ($order['type'] === 'coffee' && !empty($product['cup_sizes'])): ?>
                                                 <div class="text-sm text-gray-500 mt-1">
                                                     Cup Sizes:
                                                     <?php foreach ($product['cup_sizes'] as $size => $count): ?>

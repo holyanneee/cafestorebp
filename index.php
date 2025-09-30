@@ -20,7 +20,7 @@ if (isset($_SESSION['user_id'])) {
     $wishlist_product_ids = $select_wishlist->fetchAll(PDO::FETCH_COLUMN);
 }
 if (!isset($_SESSION['categories'])) {
-    $_SESSION['categories'] = [
+     $_SESSION['categories'] = [
         [
             'name' => 'Frappe',
             'image' => 'Frappe.jpg',
@@ -73,7 +73,6 @@ if (!isset($_SESSION['categories'])) {
             'description' => 'Delicious bites to pair with your favorite drinks.',
         ],
     ];
-
 }
 
 $categories = $_SESSION['categories'] ?? [];
@@ -92,7 +91,7 @@ $temp_top_categories = $temp_top_categories->fetchAll(PDO::FETCH_ASSOC);
 
 // if no top categories, use predefined ones
 if (count($temp_top_categories) === 0) {
-    $temp_top_categories = array_slice($categories, 0, 3);
+    $top_categories = array_slice($categories, 0, 3);
 } else {
     // get the categories
     $top_categories = [];
@@ -117,7 +116,6 @@ if (count($temp_top_categories) === 0) {
         }
     }
 }
-
 $type = 'coffee';
 
 $category = $_GET['category'] ?? '';
@@ -183,7 +181,7 @@ if (count($popular_products) === 0) {
 if (count($popular_products) < $limit) {
     $needed = max(0, $limit - count($popular_products));
 
-    if ($needed > 0) { 
+    if ($needed > 0) {
         $existing_ids = array_column($popular_products, 'product_id');
 
         $query = "

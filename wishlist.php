@@ -256,7 +256,7 @@ $total_price = array_sum(array_column($wishlist_items, 'price'));
 
                      <div class="flex justify-end">
                         <a href="wishlist.php?action=add-all"
-                           class="block rounded-sm bg-gray-700 px-5 py-3 text-sm text-gray-100 transition hover:bg-gray-600">
+                           class="block rounded-sm bg-color px-5 py-3 text-sm text-gray-100 transition bg-hover-color">
                            Add All to Cart
                         </a>
                      </div>

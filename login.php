@@ -4,6 +4,9 @@
 
 session_start();
 
+$alert = $_SESSION['alert'] ?? [];
+unset($_SESSION['alert']);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
 
    // Sanitize input safely
