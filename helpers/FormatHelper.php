@@ -23,6 +23,7 @@ class FormatHelper
                 'email' => htmlspecialchars($order['email']),
                 'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
                 'type' => htmlspecialchars($order['type']),
+                'receipt' => htmlspecialchars($order['receipt'] ?? ''),
                 'status' => [
                     'value' => htmlspecialchars($order['status']),
                     'label' => OrderStatusEnum::from($order['status'])->label(),

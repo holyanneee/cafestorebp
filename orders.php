@@ -4,7 +4,9 @@
 @include 'config.php';
 session_start();
 require_once 'helpers/FormatHelper.php';
+require_once 'enums/OrderStatusEnum.php';
 use Helpers\FormatHelper;
+use Enums\OrderStatusEnum;
 
 if (!isset($_SESSION['user_id'])) {
    header('location:login.php');
@@ -47,6 +49,7 @@ $stmt->execute($params);
 
 
 $orders = FormatHelper::formatOrders($stmt->fetchAll(PDO::FETCH_ASSOC), $conn);
+
 ?>
 
 
@@ -66,9 +69,6 @@ $orders = FormatHelper::formatOrders($stmt->fetchAll(PDO::FETCH_ASSOC), $conn);
 </head>
 
 <body>
-   <script>
-      console.log(<?= json_encode($orders) ?>);
-   </script>
    <?php include 'header.php'; ?>
 
    <main>
@@ -99,6 +99,7 @@ $orders = FormatHelper::formatOrders($stmt->fetchAll(PDO::FETCH_ASSOC), $conn);
                   <?php if (!empty($orders)): ?>
                      <?php
                      foreach ($orders as $order):
+                        $isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Completed->value && $order['receipt'] !== '');
 
                         ?>
                         <li class="flex items-center gap-4 pb-4">
@@ -134,9 +135,9 @@ $orders = FormatHelper::formatOrders($stmt->fetchAll(PDO::FETCH_ASSOC), $conn);
                            </div>
                            <div class="flex items-center gap-2">
                               <!-- recipt -->
-                              <?php if ($order['status']['value'] === 'completed'): ?>
+                              <?php if ($order['status']['value'] === 'completed' && $isOrderCompleted): ?>
                                  <a href="receipt.php?order_id=<?= $order['order_id']; ?>" target="_blank"
-                                    class="rounded bg-green-100 px-4 py-2 text-sm text-green-700 hover:bg-green-200">Receipt</a>
+                                    class="rounded bg-green-100 px-4 py-2 text-sm text-green-700 hover:bg-green-200">Invoice</a>
                               <?php endif; ?>
                               <!-- view -->
                               <a href="view_order.php?order_id=<?= $order['order_id']; ?>"

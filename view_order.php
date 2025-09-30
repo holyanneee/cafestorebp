@@ -30,6 +30,7 @@ $stmt = $conn->prepare(" SELECT
                 o.placed_on,
                 o.status,
                 o.type,
+                o.receipt,
                 GROUP_CONCAT(op.product_id) AS product_ids,
                 (SELECT SUM(op.subtotal) FROM `order_products` op WHERE op.order_id = o.id) AS total_price
             FROM `orders` o 
@@ -49,11 +50,14 @@ if (empty($order)) {
 $statusEnumCases = OrderStatusEnum::cases();
 
 
-$isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Completed->value && $order['receipt'] !== null);
+$isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Completed->value && $order['receipt'] !== '');
 
 ?>
+<script>
 
+    console.log(<?= json_encode($order) ?>);
 
+</script>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -89,7 +93,6 @@ $isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Co
                         <?php if ($isOrderCompleted): ?>
                             <a href="generate_invoice.php?order_id=<?= htmlspecialchars($order['order_id']) ?>"
                                 class="inline-block rounded bg-color px-4 py-2 text-sm font-medium text-white hover:bg-hover-color focus:outline-none focus:ring active:bg-indigo-600">
-                                Download
                                 Invoice</a>
 
                         <?php endif; ?>
