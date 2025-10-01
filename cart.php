@@ -239,18 +239,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
   <?php if (!empty($alert)): ?>
-      <script>
-         document.addEventListener('DOMContentLoaded', () => {
-            Swal.fire({
-               icon: '<?= $alert['type'] ?>',
-               title: '<?= $alert['message'] ?>',
-               showConfirmButton: false,
-               timer: 1500
-            });
-         });
-      </script>
-   <?php endif; ?>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        Swal.fire({
+          icon: '<?= $alert['type'] ?>',
+          title: '<?= $alert['message'] ?>',
+          showConfirmButton: false,
+          timer: 1500
+        });
+      });
+    </script>
+  <?php endif; ?>
+  <script>
+    // check if the filters are changed
+    document.addEventListener('DOMContentLoaded', () => {
+      const filterForm = document.getElementById('filters');
 
+      const typeSelect = document.getElementById('type');
+
+      const initialType = typeSelect.value;
+
+      let filterTimeout = null;
+
+      function checkFilters() {
+        const hasChanged =
+          typeSelect.value !== initialType;
+
+        if (!hasChanged) return;
+
+
+        filterForm.submit();
+
+      }
+
+      typeSelect.addEventListener('change', checkFilters);
+    });
+  </script>
 </body>
 
 </html>

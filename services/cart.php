@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 // Debug + JSON header
@@ -20,15 +21,12 @@ $action = $_POST['action'] ?? '';
 $product_id = isset($_POST['product_id']) ? (int) $_POST['product_id'] : 0;
 
 if (!$conn) {
-    echo json_encode(['status' => 'error', 'message' => 'No DB connection']);
+    $_SESSION['alert'] = ['type' => 'error', 'message' => 'Database connection error'];
     exit;
 }
 if (!$user_id) {
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Not logged in',
-        'redirect' => 'login.php'
-    ]);
+    $_SESSION['alert'] = ['type' => 'error', 'message' => 'Please log in first'];
+    header('Location: ../login.php');
     exit;
 }
 
@@ -99,8 +97,8 @@ if ($action == 'add_to_cart') {
             } else {
                 $insert = $conn->prepare("INSERT INTO `cart`
                     (user_id, product_id, subtotal, quantity, type) 
-                    VALUES (?, ?, ?, 1, 'religious')");
-                $insert->execute([$user_id, $product_id, $product['price']]);
+                    VALUES (?, ?, ?, 1, ?)");
+                $insert->execute([$user_id, $product_id, $product['price'], 'religious']);
             }
 
             $message = 'Added to cart!';

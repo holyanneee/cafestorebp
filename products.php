@@ -355,6 +355,7 @@ if (isset($_SESSION['user_id'])) {
                         .then(res => res.json())
                         .then(data => {
                             if (data.status === 'error') {
+                                console.log(data.message);
                                 if (data.redirect) {
                                     window.location.href = data.redirect;
                                 }
