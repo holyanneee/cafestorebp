@@ -29,60 +29,60 @@ $cart_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $total_products = count($cart_items) + (array_sum(array_column($cart_items, 'quantity')) - count($cart_items));
 
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $action = $_POST['action'] ?? '';
-  if ($action === 'remove_from_cart') {
-    $cart_id = isset($_POST['cart_id']) ? (int) $_POST['cart_id'] : 0;
-    if ($cart_id > 0) {
-      // Verify ownership before deletion
-      $verifyStmt = $conn->prepare("SELECT * FROM cart WHERE id = ? AND user_id = ? LIMIT 1");
-      $verifyStmt->execute([$cart_id, $user_id]);
-      $cartItem = $verifyStmt->fetch(PDO::FETCH_ASSOC);
-      if ($cartItem) {
-        $delStmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
-        $delStmt->execute([$cart_id, $user_id]);
-        $_SESSION['alert'] = ['type' => 'success', 'message' => 'Item removed from cart!'];
-      } else {
-        $_SESSION['alert'] = ['type' => 'error', 'message' => 'Item not found in your cart.'];
-      }
-    } else {
-      $_SESSION['alert'] = ['type' => 'error', 'message' => 'Invalid cart item.'];
-    }
-  }
+// if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+//   $action = $_POST['action'] ?? '';
+//   if ($action === 'remove_from_cart') {
+//     $cart_id = isset($_POST['cart_id']) ? (int) $_POST['cart_id'] : 0;
+//     if ($cart_id > 0) {
+//       // Verify ownership before deletion
+//       $verifyStmt = $conn->prepare("SELECT * FROM cart WHERE id = ? AND user_id = ? LIMIT 1");
+//       $verifyStmt->execute([$cart_id, $user_id]);
+//       $cartItem = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+//       if ($cartItem) {
+//         $delStmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
+//         $delStmt->execute([$cart_id, $user_id]);
+//         $_SESSION['alert'] = ['type' => 'success', 'message' => 'Item removed from cart!'];
+//       } else {
+//         $_SESSION['alert'] = ['type' => 'error', 'message' => 'Item not found in your cart.'];
+//       }
+//     } else {
+//       $_SESSION['alert'] = ['type' => 'error', 'message' => 'Invalid cart item.'];
+//     }
+//   }
 
-  if ($action === 'update_cart_item') {
-    $cart_id = isset($_POST['cart_id']) ? (int) $_POST['cart_id'] : 0;
-    $quantity = isset($_POST['quantity']) ? max(1, (int) $_POST['quantity']) : 1; // Minimum quantity of 1
-    if ($cart_id > 0) {
-      // Verify ownership before update
-      $verifyStmt = $conn->prepare("SELECT * FROM cart WHERE id = ? AND user_id = ? LIMIT 1");
-      $verifyStmt->execute([$cart_id, $user_id]);
-      $cartItem = $verifyStmt->fetch(PDO::FETCH_ASSOC);
-      if ($cartItem) {
-        // Fetch product price
-        $productStmt = $conn->prepare("SELECT price FROM products WHERE id = ? LIMIT 1");
-        $productStmt->execute([$cartItem['product_id']]);
-        $product = $productStmt->fetch(PDO::FETCH_ASSOC);
-        if ($product) {
-          $newSubtotal = $product['price'] * $quantity; // or use cup price if coffee
-          $updStmt = $conn->prepare("UPDATE cart SET quantity = ?, subtotal = ? WHERE id = ? AND user_id = ?");
-          $updStmt->execute([$quantity, $newSubtotal, $cart_id, $user_id]);
-          $_SESSION['alert'] = ['type' => 'success', 'message' => 'Cart updated successfully!'];
-        } else {
-          $_SESSION['alert'] = ['type' => 'error', 'message' => 'Product not found.'];
-        }
-      } else {
-        $_SESSION['alert'] = ['type' => 'error', 'message' => 'Item not found in your cart.'];
-      }
-    } else {
-      $_SESSION['alert'] = ['type' => 'error', 'message' => 'Invalid cart item.'];
-    }
-  }
+//   if ($action === 'update_cart_item') {
+//     $cart_id = isset($_POST['cart_id']) ? (int) $_POST['cart_id'] : 0;
+//     $quantity = isset($_POST['quantity']) ? max(1, (int) $_POST['quantity']) : 1; // Minimum quantity of 1
+//     if ($cart_id > 0) {
+//       // Verify ownership before update
+//       $verifyStmt = $conn->prepare("SELECT * FROM cart WHERE id = ? AND user_id = ? LIMIT 1");
+//       $verifyStmt->execute([$cart_id, $user_id]);
+//       $cartItem = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+//       if ($cartItem) {
+//         // Fetch product price
+//         $productStmt = $conn->prepare("SELECT price FROM products WHERE id = ? LIMIT 1");
+//         $productStmt->execute([$cartItem['product_id']]);
+//         $product = $productStmt->fetch(PDO::FETCH_ASSOC);
+//         if ($product) {
+//           $newSubtotal = $product['price'] * $quantity; // or use cup price if coffee
+//           $updStmt = $conn->prepare("UPDATE cart SET quantity = ?, subtotal = ? WHERE id = ? AND user_id = ?");
+//           $updStmt->execute([$quantity, $newSubtotal, $cart_id, $user_id]);
+//           $_SESSION['alert'] = ['type' => 'success', 'message' => 'Cart updated successfully!'];
+//         } else {
+//           $_SESSION['alert'] = ['type' => 'error', 'message' => 'Product not found.'];
+//         }
+//       } else {
+//         $_SESSION['alert'] = ['type' => 'error', 'message' => 'Item not found in your cart.'];
+//       }
+//     } else {
+//       $_SESSION['alert'] = ['type' => 'error', 'message' => 'Invalid cart item.'];
+//     }
+//   }
 
-  // Redirect to avoid form resubmission
-  header('Location: cart.php?type=' . urlencode($type));
-  exit;
-}
+//   // Redirect to avoid form resubmission
+//   header('Location: cart.php?type=' . urlencode($type));
+//   exit;
+// }
 ?>
 
 <!DOCTYPE html>
@@ -133,10 +133,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $isTypeCoffee = $item['type'] === 'coffee';
                     if ($isTypeCoffee) {
                       $product_cup_sizes = isset($item['product_cup_sizes']) ? json_decode($item['product_cup_sizes'], true) : [];
-                      $cup_size = isset($item['cup_size']) ? strtolower(json_decode($item['cup_size'], true)['size']) : 'regular';
+                      $cup_size = isset($item['cup_size']) ? json_decode($item['cup_size'], true)['size'] : 'Regular';
                       $cup_size_price = isset($item['cup_size']) ? (json_decode($item['cup_size'], true)['price']) : 0;
                       $product_ingredients = isset($item['ingredients']) ? (json_decode($item['ingredients'], true)) : [];
-                      $add_ons = isset($item['add_ons']) ? (json_decode($item['add_ons'], true)) : [];
+                      $stmt = $conn->prepare("SELECT * FROM products WHERE category = 'Add-ons'");
+                      $stmt->execute();
+                      $add_ons = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                      $selected_add_ons = isset($item['add_ons']) ? json_decode($item['add_ons'], true) : [];
+
+
+
                       $special_instructions = isset($item['special_instruction']) ? htmlspecialchars($item['special_instruction'], ENT_QUOTES) : '';
                     }
                     ?>
@@ -156,6 +162,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <dd class="inline"><?= $item['quantity']; ?></dd>
                           </div>
                           <div>
+                            <?php if ($isTypeCoffee): ?>
+                              <dt class="inline">Cup Size:</dt>
+                              <dd class="inline"><?= htmlspecialchars(ucfirst($cup_size)); ?> (+
+                                ₱<?= number_format($cup_size_price, 2); ?>)</dd>
+                              <?php $subtotal ?>
+                            <?php endif; ?>
+                          </div>
+                          <div>
                             <dt class="inline">Subtotal:</dt>
                             <dd class="inline">₱<?= number_format($subtotal, 2); ?></dd>
                           </div>
@@ -163,8 +177,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                       </div>
 
                       <div class="flex items-center gap-2">
+
+
                         <?php if ($isTypeCoffee): ?>
-                          <button command="show-modal" commandfor="customize-<?= $item['id'] ?>"
+                          <button command="show-modal" commandfor="customize-modal-<?= $item['id'] ?>"
                             class="text-gray-600 transition hover:text-blue-600">
                             <span class="sr-only">Customize item</span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
@@ -173,23 +189,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.93zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                             </svg>
                           </button>
+                          <?php include 'cart_customize_modal.php'; ?>
+                        <?php else: ?>
+                          <form target="" method="post" id="update-quantity-form-<?= $item['id']; ?>">
+                            <label for="quantity-<?= $item['id']; ?>" class="sr-only"> Quantity </label>
+                            <input type="hidden" name="action" value="update_quantity">
+                            <input type="hidden" name="cart_id" value="<?= $item['id']; ?>">
+                            <input type="number" min="1" value="<?= $item['quantity']; ?>" id="quantity-<?= $item['id']; ?>"
+                              name="quantity-<?= $item['id']; ?>"
+                              class="h-8 w-12 rounded-sm border-gray-200 bg-gray-50 p-0 text-center text-xs text-gray-600 [-moz-appearance:_textfield] focus:outline-hidden [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none" />
+                          </form>
                         <?php endif; ?>
-                        <?php include 'cart_customize_modal.php'; ?>
 
-                        <form action="" method="post">
-                          <input type="hidden" name="cart_id" value="<?= $item['id']; ?>">
-                          <input type="hidden" name="action" value="remove_from_cart">
-                          <button type="submit" class="text-gray-600 transition hover:text-red-600">
-                            <span class="sr-only">Remove item</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                              stroke="currentColor" class="size-4">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166
+                        <button type="submit" class="text-gray-600 transition hover:text-red-600"
+                          id="remove-item-<?= $item['id'] ?>" data-cart-id="<?= $item['id']; ?>">
+                          <span class="sr-only">Remove item</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                            stroke="currentColor" class="size-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166
                                     m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084
                                     a2.25 2.25 0 01-2.244-2.077L4.772 5.79
                                     m14.456 0a48.108 48.108 0 00-3.478-.397" />
-                            </svg>
-                          </button>
-                        </form>
+                          </svg>
+                        </button>
+
                     </li>
 
 
@@ -273,6 +296,200 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
 
       typeSelect.addEventListener('change', checkFilters);
+    });
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const forms = document.querySelectorAll('form[id^="customize-form-"]');
+
+      forms.forEach(form => {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+
+          const formData = new FormData(form);
+          const modalId = `customize-modal-${formData.get('cart_id')}`;
+          const modalElement = document.getElementById(modalId);
+
+          const data = Object.fromEntries(formData.entries());
+
+
+          try {
+
+            const response = await fetch('services/cart.php', {
+              method: 'POST',
+              body: formData
+            });
+            const data = await response.json();
+
+            if (modalElement) {
+              if (typeof tailwind !== 'undefined' && tailwind.Modal) {
+                const instance = tailwind.Modal.getInstance(modalElement);
+                if (instance) {
+                  instance.hide();
+                } else {
+                  // Create new instance if missing
+                  const newInstance = new tailwind.Modal(modalElement);
+                  newInstance.hide();
+                }
+              } else {
+                // Manual close fallback
+                modalElement.classList.add('hidden');
+                modalElement.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('overflow-hidden'); // restore scroll
+              }
+            }
+
+
+            if (data.status === 'success') {
+              await Swal.fire({
+                icon: 'success',
+                title: data.message,
+                showConfirmButton: false,
+                timer: 1500
+              }).then(() => {
+                window.location.reload();
+              });
+
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: data.message || 'An error occurred',
+                showConfirmButton: false,
+                timer: 1500
+              }).then(() => {
+                window.location.reload();
+              });
+            }
+
+          } catch (error) {
+            console.error('Error:', error);
+            Swal.fire({
+              icon: 'error',
+              title: 'An error occurred',
+              showConfirmButton: false,
+              timer: 1500
+            });
+          }
+        });
+      });
+    });
+  </script>
+
+  <script>
+    // update quantity for non-coffee items
+    document.addEventListener('DOMContentLoaded', () => {
+      const quantityInputs = document.querySelectorAll('input[id^="quantity-"]');
+
+      quantityInputs.forEach(input => {
+        input.addEventListener('change', async (e) => {
+          const formId = `update-quantity-form-${input.getAttribute('id').split('-')[1]}`;
+          const form = document.getElementById(formId);
+          if (!form) return;
+
+          e.preventDefault();
+          const formData = new FormData(form);
+
+          try {
+            const response = await fetch('services/cart.php', {
+              method: 'POST',
+              body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+              await Swal.fire({
+                icon: 'success',
+                title: data.message,
+                showConfirmButton: false,
+                timer: 1500
+              });
+              window.location.reload();
+            } else {
+              console.error('Error:', data.message);
+              Swal.fire({
+                icon: 'error',
+                title: data.message || 'An error occurred',
+                showConfirmButton: false,
+                timer: 1500
+              });
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            Swal.fire({
+              icon: 'error',
+              title: 'An error occurred',
+              showConfirmButton: false,
+              timer: 1500
+            });
+          }
+        });
+      });
+    });
+  </script>
+
+  <script>
+    // delete cart item
+    document.addEventListener('DOMContentLoaded', () => {
+      const removeButtons = document.querySelectorAll('button[id^="remove-item-"]');
+
+      removeButtons.forEach(button => {
+        button.addEventListener('click', async (e) => {
+          e.preventDefault();
+          Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+          }).then(async (result) => {
+            if (result.isConfirmed) {
+              const cartId = button.getAttribute('data-cart-id');
+              const formData = new FormData();
+              formData.append('action', 'remove_from_cart');
+              formData.append('cart_id', cartId);
+
+              try {
+                const response = await fetch('services/cart.php', {
+                  method: 'POST',
+                  body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                  await Swal.fire({
+                    icon: 'success',
+                    title: data.message,
+                    showConfirmButton: false,
+                    timer: 1500
+                  });
+                  window.location.reload();
+                } else {
+                  console.error('Error:', data.message);
+                  Swal.fire({
+                    icon: 'error',
+                    title: data.message || 'An error occurred',
+                    showConfirmButton: false,
+                    timer: 1500
+                  });
+                }
+              } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                  icon: 'error',
+                  title: 'An error occurred',
+                  showConfirmButton: false,
+                  timer: 1500
+                });
+              }
+            }
+          });
+        });
+      });
     });
   </script>
 </body>

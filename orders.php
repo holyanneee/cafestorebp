@@ -78,7 +78,9 @@ $orders = FormatHelper::formatOrders($stmt->fetchAll(PDO::FETCH_ASSOC), $conn);
                <h1 class="text-xl font-bold text-color sm:text-3xl">Your Orders</h1>
                <form method="get" class="flex flex-wrap gap-3" id="filters">
                   <!-- Type Filter -->
-                  <select name="type" class="h-10 rounded border-gray-300 text-sm" id="type">
+                  <select name="type"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
+                     id="type">
                      <option value="">All Types</option>
                      <option value="coffee" <?= $type === 'coffee' ? 'selected' : ''; ?>>Coffee</option>
                      <option value="religious" <?= $type === 'religious' ? 'selected' : ''; ?>>Religious Items
@@ -87,7 +89,8 @@ $orders = FormatHelper::formatOrders($stmt->fetchAll(PDO::FETCH_ASSOC), $conn);
 
                   <!-- Search -->
                   <input type="text" name="search" id="serach" placeholder="Search products..."
-                     value="<?= htmlspecialchars($search); ?>" class="h-10 rounded border-gray-300 text-sm px-3" />
+                     value="<?= htmlspecialchars($search); ?>"
+                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5" />
                   <!-- reset btn -->
                   <a href="products.php"
                      class="h-10 rounded bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200">Reset</a>
@@ -100,7 +103,6 @@ $orders = FormatHelper::formatOrders($stmt->fetchAll(PDO::FETCH_ASSOC), $conn);
                      <?php
                      foreach ($orders as $order):
                         $isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Completed->value && $order['receipt'] !== '');
-
                         ?>
                         <li class="flex items-center gap-4 pb-4">
 
@@ -112,8 +114,11 @@ $orders = FormatHelper::formatOrders($stmt->fetchAll(PDO::FETCH_ASSOC), $conn);
                               <dl class="mt-1 space-y-px text-[11px] text-gray-600">
                                  <div>
                                     <dt class="inline">Total Price:</dt>
-                                    <dd class="inline">₱<?= number_format((int) $order['total_price'], 2); ?></dd>
+                                    <dd class="inline">₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?></dd>
                                  </div>
+                                 <script>
+                                    console.log(<?= json_encode($order); ?>);
+                                 </script>
                                  <div>
                                     <dt class="inline">Date:</dt>
                                     <dd class="inline">
@@ -131,6 +136,7 @@ $orders = FormatHelper::formatOrders($stmt->fetchAll(PDO::FETCH_ASSOC), $conn);
                                           </span>
                                        </span>
                                     </dd>
+                                 </div>
                               </dl>
                            </div>
                            <div class="flex items-center gap-2">

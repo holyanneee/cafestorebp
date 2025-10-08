@@ -12,40 +12,92 @@ if (!$admin_id) {
     exit();
 }
 
-
-
 $completedStatus = OrderStatusEnum::Completed;
+$type = isset($_GET['type']) && in_array($_GET['type'], ['coffee', 'religious']) ? $_GET['type'] : null;
+$month = isset($_GET['month']) && in_array($_GET['month'], range(1, 12)) ? (int) $_GET['month'] : null;
 
-//default 
-// fetch earnings for the current month
+
+// Default month/year
 $month = date('m');
 $year = date('Y');
-$select_monthly_earnings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_monthly_earnings FROM order_products op JOIN orders o ON op.order_id = o.id WHERE MONTH(o.placed_on) = ? AND YEAR(o.placed_on) = ? AND o.status = ?");
-$select_monthly_earnings->execute([$month, $year, $completedStatus->value]);
+
+// 🔹 Base query condition
+$typeCondition = $type ? "AND o.type = ?" : "";
+
+// Monthly earnings
+$sql_monthly = "
+    SELECT SUM(op.price * op.quantity) AS total_monthly_earnings 
+    FROM order_products op 
+    JOIN orders o ON op.order_id = o.id 
+    WHERE MONTH(o.placed_on) = ? 
+      AND YEAR(o.placed_on) = ? 
+      AND o.status = ?
+      $typeCondition
+";
+
+$select_monthly_earnings = $conn->prepare($sql_monthly);
+$params = [$month, $year, $completedStatus->value];
+if ($type)
+    $params[] = $type;
+$select_monthly_earnings->execute($params);
 $fetch_monthly_earnings = $select_monthly_earnings->fetch(PDO::FETCH_ASSOC);
 $total_monthly_earnings = $fetch_monthly_earnings['total_monthly_earnings'] ?? 0;
 
-// fetch earnings for the current year
-$select_annual_earnings = $conn->prepare("SELECT SUM(op.price * op.quantity) AS total_annual_earnings FROM order_products op JOIN orders o ON op.order_id = o.id WHERE YEAR(o.placed_on) = ? AND o.status = ?");
-$select_annual_earnings->execute([$year, $completedStatus->value]);
+// Annual earnings
+$sql_annual = "
+    SELECT SUM(op.price * op.quantity) AS total_annual_earnings 
+    FROM order_products op 
+    JOIN orders o ON op.order_id = o.id 
+    WHERE YEAR(o.placed_on) = ? 
+      AND o.status = ?
+      $typeCondition
+";
+
+$select_annual_earnings = $conn->prepare($sql_annual);
+$params = [$year, $completedStatus->value];
+if ($type)
+    $params[] = $type;
+$select_annual_earnings->execute($params);
 $fetch_annual_earnings = $select_annual_earnings->fetch(PDO::FETCH_ASSOC);
 $total_annual_earnings = $fetch_annual_earnings['total_annual_earnings'] ?? 0;
 
-// fetch total orders current month
-$select_monthly_orders = $conn->prepare("SELECT COUNT(*) AS total_monthly_orders FROM orders WHERE MONTH(placed_on) = ? AND YEAR(placed_on) = ? AND status = ?");
-$select_monthly_orders->execute([$month, $year, $completedStatus->value]);
+// Monthly orders
+$sql_monthly_orders = "
+    SELECT COUNT(*) AS total_monthly_orders 
+    FROM orders 
+    WHERE MONTH(placed_on) = ? 
+      AND YEAR(placed_on) = ? 
+      AND status = ?
+      " . ($type ? "AND type = ?" : "") . "
+";
+
+$select_monthly_orders = $conn->prepare($sql_monthly_orders);
+$params = [$month, $year, $completedStatus->value];
+if ($type)
+    $params[] = $type;
+$select_monthly_orders->execute($params);
 $fetch_monthly_orders = $select_monthly_orders->fetch(PDO::FETCH_ASSOC);
 $total_monthly_orders = $fetch_monthly_orders['total_monthly_orders'] ?? 0;
 
-// fetch total orders current year
-$select_annual_orders = $conn->prepare("SELECT COUNT(*) AS total_annual_orders FROM orders WHERE YEAR(placed_on) = ? AND status = ?");
-$select_annual_orders->execute([$year, $completedStatus->value]);
+// Annual orders
+$sql_annual_orders = "
+    SELECT COUNT(*) AS total_annual_orders 
+    FROM orders 
+    WHERE YEAR(placed_on) = ? 
+      AND status = ?
+      " . ($type ? "AND type = ?" : "") . "
+";
+
+$select_annual_orders = $conn->prepare($sql_annual_orders);
+$params = [$year, $completedStatus->value];
+if ($type)
+    $params[] = $type;
+$select_annual_orders->execute($params);
 $fetch_annual_orders = $select_annual_orders->fetch(PDO::FETCH_ASSOC);
 $total_annual_orders = $fetch_annual_orders['total_annual_orders'] ?? 0;
 
-
-// fetch popular orders
-$select_popular_products = $conn->prepare("
+// Popular products
+$sql_popular = "
     SELECT 
         op.product_id, 
         p.name AS product_name, 
@@ -56,15 +108,21 @@ $select_popular_products = $conn->prepare("
     JOIN products p ON op.product_id = p.id 
     JOIN orders o ON op.order_id = o.id
     WHERE o.status = ?
+      $typeCondition
     GROUP BY op.product_id 
     ORDER BY total_quantity DESC 
     LIMIT 5
-");
+";
 
-$select_popular_products->execute([$completedStatus->value]);
+$select_popular_products = $conn->prepare($sql_popular);
+$params = [$completedStatus->value];
+if ($type)
+    $params[] = $type;
+$select_popular_products->execute($params);
 $popular_products = $select_popular_products->fetchAll(PDO::FETCH_ASSOC);
 
-$select_recent_order = $conn->prepare("
+// Recent orders
+$sql_recent = "
     SELECT 
         o.id AS order_id, 
         o.name, 
@@ -73,16 +131,21 @@ $select_recent_order = $conn->prepare("
         o.placed_on
     FROM orders o 
     JOIN order_products op ON o.id = op.order_id 
+    WHERE 1=1
+      " . ($type ? "AND o.type = ?" : "") . "
     GROUP BY o.id 
     ORDER BY o.placed_on DESC 
     LIMIT 5
-");
+";
 
-$select_recent_order->execute();
+$select_recent_order = $conn->prepare($sql_recent);
+$params = [];
+if ($type)
+    $params[] = $type;
+$select_recent_order->execute($params);
 $recent_orders = $select_recent_order->fetchAll(PDO::FETCH_ASSOC);
-
-
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -307,8 +370,56 @@ $recent_orders = $select_recent_order->fetchAll(PDO::FETCH_ASSOC);
             <div class="container-fluid">
 
                 <!-- Page Heading -->
-                <div class="d-sm-flex align-items-center justify-content-between mb-5">
-                    <h1 class="h2 mb-0 text-gray-800">Overview</h1>
+                <div class="row mb-5">
+                    <div class="col">
+                        <h1 class="h2 mb-0 text-gray-800">Overview</h1>
+                    </div>
+                    <div class="col">
+                        <form method="get" id="filters" class="d-flex align-items-center">
+                            <!-- Type Filter -->
+                            <div class="d-flex align-items-center">
+                                <label for="type" class="me-2">Type:</label>
+                                <select name="type" class="form-select" id="type">
+                                    <option value="">All Types</option>
+                                    <option value="coffee" <?= $type === 'coffee' ? 'selected' : ''; ?>>Coffee</option>
+                                    <option value="religious" <?= $type === 'religious' ? 'selected' : ''; ?>>Religious Items
+                                    </option>
+                                </select>
+                            </div>
+    
+                            <!-- Month Filter -->
+                            <div class="d-flex align-items-center ms-3">
+                                <label for="month" class="me-2">Month:</label>
+                                <select name="month" class="form-select" id="month">
+                                    <option value="">All Months</option>
+                                    <?php
+                                    for ($m = 1; $m <= 12; $m++) {
+                                        $monthName = date('F', mktime(0, 0, 0, $m, 10));
+                                        $selected = (isset($_GET['month']) && $_GET['month'] == $m) ? 'selected' : '';
+                                        echo "<option value='$m' $selected>$monthName</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+    
+                            <!-- Year Filter -->
+                            <div class="d-flex align-items-center ms-3">
+                                <label for="year" class="me-2">Year:</label>
+                                <select name="year" class="form-select" id="year">
+                                    <?php
+                                    $currentYear = date('Y');
+                                    for ($y = $currentYear; $y >= $currentYear - 5; $y--) {
+                                        $selected = (isset($_GET['year']) && $_GET['year'] == $y) ? 'selected' : '';
+                                        echo "<option value='$y' $selected>$y</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            <div>
+                                <a href="admin_overview.php" class="btn btn-sm btn-secondary ms-2 mt-0">Reset</a>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
                 <!-- Content Row -->
@@ -488,13 +599,34 @@ $recent_orders = $select_recent_order->fetchAll(PDO::FETCH_ASSOC);
 
             </div>
             <!-- End of Main Content -->
-
-
         </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // check if the filters are changed
+        document.addEventListener('DOMContentLoaded', () => {
+            const filterForm = document.getElementById('filters');
+
+            const typeSelect = document.getElementById('type');
+            const monthSelect = document.getElementById('month');
+
+            const initialType = typeSelect.value;
+            const initialMonth = monthSelect.value;
+
+            function checkFilters() {
+                if (typeSelect.value !== initialType || monthSelect.value !== initialMonth) {
+                    // Submit the form
+                    filterForm.submit();
+                }
+            }
+
+            typeSelect.addEventListener('change', checkFilters);
+        });
+    </script>
 
 </body>
 

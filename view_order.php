@@ -221,7 +221,7 @@ $isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Co
                                             <?= $product['quantity'] ?>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            ₱ <?= number_format($product['subtotal'], 2) ?>
+                                            ₱ <?= number_format((float) str_replace(',', '', $product['subtotal']), 2) ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -232,7 +232,7 @@ $isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Co
                                         Total:
                                     </td>
                                     <td class="px-6 py-4 font-bold text-gray-900">
-                                        ₱ <?= number_format($order['total_price'], 2) ?>
+                                        ₱ <?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?>
                                     </td>
                                 </tr>
                             </tfoot>

@@ -116,6 +116,8 @@ if (count($temp_top_categories) === 0) {
         }
     }
 }
+
+$_SESSION['top_categories'] = $top_categories;
 $type = 'coffee';
 
 $category = $_GET['category'] ?? '';
@@ -566,6 +568,7 @@ if (!empty($_POST['send'])) {
                         .then(res => res.json())
                         .then(data => {
                             if (data.status === 'error') {
+                                console.log(data);
                                 if (data.redirect) {
                                     window.location.href = data.redirect;
                                 }

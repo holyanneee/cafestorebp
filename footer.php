@@ -43,19 +43,30 @@
 
                         <ul class="mt-6 space-y-4 text-sm">
                             <?php
+                            $session_categories = $_SESSION['categories'] ?? [];
+                            $session_top_categories = $_SESSION['top_categories'] ?? [];
                             $topCategoryNames = [];
-                            if (isset($top_categories) && is_array($top_categories)) {
-                                $topCategoryNames = array_column($top_categories, 'name');
-                            }
-                            if (!isset($categories)) {
-                                $categories = $_SESSION['categories'];
 
+                            // get only the names of the top categories
+                            foreach ($session_top_categories as $topCat) {
+                                $topCategoryNames[] = $topCat['name'];
                             }
+
+                            // check if top_categories are in $_SESSION categoreies
+                            if ($session_categories) {
+                                foreach ($session_categories as $cat) {
+                                    // only add unique categories
+                                    if (!in_array($cat['name'], $topCategoryNames, true)) {
+                                        $categories[] = $cat;
+                                    }
+    
+                                }
+                            } 
+
+                            // limit the categories to 5
+                            $categories = array_slice($categories, 0, 5);
                             ?>
                             <?php foreach ($categories as $category): ?>
-                                <!-- check if the category name is on $top_categories, if true dont display it -->
-                                <?php if (in_array($category['name'], $topCategoryNames, true))
-                                    continue; ?>
                                 <li>
                                     <a href="products.php?category=<?= urlencode($category['name']); ?>"
                                         class="text-gray-700 transition hover:opacity-75 dark:text-gray-200">
