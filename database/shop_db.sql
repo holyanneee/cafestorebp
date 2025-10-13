@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Oct 01, 2025 at 03:47 AM
+-- Generation Time: Oct 13, 2025 at 05:51 PM
 -- Server version: 8.0.30
 -- PHP Version: 8.2.27
 
@@ -45,9 +45,7 @@ CREATE TABLE `cart` (
 --
 
 INSERT INTO `cart` (`id`, `user_id`, `product_id`, `quantity`, `type`, `cup_size`, `subtotal`, `add_ons`, `ingredients`, `special_instruction`) VALUES
-(34, 45, 30, 1, 'coffee', '{\"size\": \"Regular\", \"price\": 5}', '94.00', NULL, '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', NULL),
-(35, 45, 37, 1, 'coffee', '{\"size\": \"Regular\", \"price\": 5}', '105.00', NULL, '{\"1\": {\"name\": \"Sugar\", \"level\": \"Regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"Regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"Regular\"}}', NULL),
-(36, 45, 49, 2, 'religious', NULL, '666.00', NULL, NULL, NULL);
+(45, 45, 30, 1, 'coffee', '{\"size\": \"regular\", \"price\": 5}', '94.00', NULL, '{\"1\": {\"name\": \"Sugar\", \"level\": \"regular\"}, \"2\": {\"name\": \"Ice\", \"level\": \"regular\"}, \"5\": {\"name\": \"Frappe\", \"level\": \"regular\"}}', NULL);
 
 -- --------------------------------------------------------
 
@@ -124,9 +122,10 @@ CREATE TABLE `orders` (
   `number` varchar(12) COLLATE utf8mb4_general_ci NOT NULL,
   `email` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
   `method` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
-  `address` varchar(500) COLLATE utf8mb4_general_ci NOT NULL,
+  `address` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `status` enum('pending','received','preparing','pick-up','on the way','completed') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pending',
   `type` enum('coffee','religious') COLLATE utf8mb4_general_ci NOT NULL,
+  `delivery_fee` int NOT NULL,
   `updated_by_cashier` text COLLATE utf8mb4_general_ci,
   `updated_by_barista` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `receipt` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
@@ -140,8 +139,10 @@ CREATE TABLE `orders` (
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `user_id`, `name`, `number`, `email`, `method`, `address`, `status`, `type`, `updated_by_cashier`, `updated_by_barista`, `receipt`, `is_walk_in`, `placed_on`, `created_at`, `updated_at`) VALUES
-(9, 45, 'Roy Joseph Mendoza Latayan', '09512370553', 'royjosephlatayan16@gmail.com', 'gcash', 'Lamot 2 Calauan, Laguna\r\nLamot 2 Calauan, Laguna', 'completed', 'coffee', NULL, NULL, NULL, 0, '2025-09-30 07:32:41', '2025-09-30 05:59:48', '2025-09-30 07:32:41');
+INSERT INTO `orders` (`id`, `user_id`, `name`, `number`, `email`, `method`, `address`, `status`, `type`, `delivery_fee`, `updated_by_cashier`, `updated_by_barista`, `receipt`, `is_walk_in`, `placed_on`, `created_at`, `updated_at`) VALUES
+(9, 45, 'Roy Joseph Mendoza Latayan', '09512370553', 'royjosephlatayan16@gmail.com', 'gcash', 'Lamot 2 Calauan, Laguna\r\nLamot 2 Calauan, Laguna', 'completed', 'coffee', 10, NULL, NULL, NULL, 0, '2025-10-10 16:19:41', '2025-09-30 05:59:48', '2025-10-10 16:19:41'),
+(10, 45, 'Roy Joseph Mendoza Latayan', '09512370553', 'royjosephlatayan16@gmail.com', 'cash on delivery', 'Lamot 2 Calauan, Laguna\r\nLamot 2 Calauan, Laguna', 'preparing', 'coffee', 10, NULL, NULL, NULL, 0, '2025-10-10 16:19:45', '2025-10-08 08:29:31', '2025-10-10 16:19:45'),
+(11, 45, 'Roy Joseph Mendoza Latayan', '09512370553', 'royjosephlatayan16@gmail.com', 'cash on delivery', '3920 - tapat ng sdadwwsd, Lamot 2, ', 'pending', 'coffee', 10, NULL, NULL, NULL, 0, '2025-10-10 16:19:52', '2025-10-10 16:07:15', '2025-10-10 16:19:52');
 
 -- --------------------------------------------------------
 
@@ -168,7 +169,12 @@ CREATE TABLE `order_products` (
 --
 
 INSERT INTO `order_products` (`id`, `order_id`, `product_id`, `quantity`, `price`, `subtotal`, `ingredients`, `cup_sizes`, `add_ons`, `created_at`, `updated_at`) VALUES
-(7, 9, 37, 1, '100.00', '105.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"Regular\"}}', '{\"size\":\"Regular\",\"price\":5}', '[]', '2025-09-30 05:59:48', '2025-09-30 05:59:48');
+(7, 9, 37, 1, '100.00', '105.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"Regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"Regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"Regular\"}}', '{\"size\":\"Regular\",\"price\":5}', '[]', '2025-09-30 05:59:48', '2025-09-30 05:59:48'),
+(9, 10, 39, 1, '300.00', '325.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"regular\"}}', '{\"size\":\"regular\",\"price\":5}', '{\"45\":{\"name\":\"Tapioca Pearls\",\"price\":20}}', '2025-10-08 08:29:31', '2025-10-08 08:29:31'),
+(10, 10, 40, 13, '100.00', '1820.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"extra\"},\"2\":{\"name\":\"Ice\",\"level\":\"extra\"}}', '{\"size\":\"large\",\"price\":20}', '{\"45\":{\"name\":\"Tapioca Pearls\",\"price\":20}}', '2025-10-08 08:29:31', '2025-10-08 08:29:31'),
+(12, 11, 30, 1, '89.00', '114.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"less\"}}', '{\"size\":\"regular\",\"price\":5}', '{\"45\":{\"name\":\"Tapioca Pearls\",\"price\":20}}', '2025-10-10 16:07:15', '2025-10-10 16:07:15'),
+(13, 11, 37, 2, '100.00', '250.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"extra\"},\"2\":{\"name\":\"Ice\",\"level\":\"extra\"},\"5\":{\"name\":\"Frappe\",\"level\":\"extra\"}}', '{\"size\":\"regular\",\"price\":5}', '{\"45\":{\"name\":\"Tapioca Pearls\",\"price\":20}}', '2025-10-10 16:07:15', '2025-10-10 16:07:15'),
+(14, 11, 24, 1, '100.00', '105.00', '{\"1\":{\"name\":\"Sugar\",\"level\":\"regular\"},\"2\":{\"name\":\"Ice\",\"level\":\"regular\"},\"5\":{\"name\":\"Frappe\",\"level\":\"regular\"}}', '{\"size\":\"regular\",\"price\":5}', '[]', '2025-10-10 16:07:15', '2025-10-10 16:07:15');
 
 -- --------------------------------------------------------
 
@@ -318,7 +324,7 @@ ALTER TABLE `wishlist`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
 
 --
 -- AUTO_INCREMENT for table `deliveries`
@@ -342,7 +348,7 @@ ALTER TABLE `message`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `order_products`
