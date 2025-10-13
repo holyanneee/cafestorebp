@@ -13,15 +13,13 @@ if (!$admin_id) {
 }
 
 $completedStatus = OrderStatusEnum::Completed;
+
+// Filters
 $type = isset($_GET['type']) && in_array($_GET['type'], ['coffee', 'religious']) ? $_GET['type'] : null;
-$month = isset($_GET['month']) && in_array($_GET['month'], range(1, 12)) ? (int) $_GET['month'] : null;
+$month = isset($_GET['month']) && in_array((int)$_GET['month'], range(1, 12)) ? (int)$_GET['month'] : (int)date('m');
+$year = isset($_GET['year']) && is_numeric($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
 
-
-// Default month/year
-$month = date('m');
-$year = date('Y');
-
-// 🔹 Base query condition
+// Query conditions
 $typeCondition = $type ? "AND o.type = ?" : "";
 
 // Monthly earnings
@@ -34,14 +32,11 @@ $sql_monthly = "
       AND o.status = ?
       $typeCondition
 ";
-
 $select_monthly_earnings = $conn->prepare($sql_monthly);
 $params = [$month, $year, $completedStatus->value];
-if ($type)
-    $params[] = $type;
+if ($type) $params[] = $type;
 $select_monthly_earnings->execute($params);
-$fetch_monthly_earnings = $select_monthly_earnings->fetch(PDO::FETCH_ASSOC);
-$total_monthly_earnings = $fetch_monthly_earnings['total_monthly_earnings'] ?? 0;
+$total_monthly_earnings = $select_monthly_earnings->fetchColumn() ?? 0;
 
 // Annual earnings
 $sql_annual = "
@@ -52,14 +47,11 @@ $sql_annual = "
       AND o.status = ?
       $typeCondition
 ";
-
 $select_annual_earnings = $conn->prepare($sql_annual);
 $params = [$year, $completedStatus->value];
-if ($type)
-    $params[] = $type;
+if ($type) $params[] = $type;
 $select_annual_earnings->execute($params);
-$fetch_annual_earnings = $select_annual_earnings->fetch(PDO::FETCH_ASSOC);
-$total_annual_earnings = $fetch_annual_earnings['total_annual_earnings'] ?? 0;
+$total_annual_earnings = $select_annual_earnings->fetchColumn() ?? 0;
 
 // Monthly orders
 $sql_monthly_orders = "
@@ -70,14 +62,11 @@ $sql_monthly_orders = "
       AND status = ?
       " . ($type ? "AND type = ?" : "") . "
 ";
-
 $select_monthly_orders = $conn->prepare($sql_monthly_orders);
 $params = [$month, $year, $completedStatus->value];
-if ($type)
-    $params[] = $type;
+if ($type) $params[] = $type;
 $select_monthly_orders->execute($params);
-$fetch_monthly_orders = $select_monthly_orders->fetch(PDO::FETCH_ASSOC);
-$total_monthly_orders = $fetch_monthly_orders['total_monthly_orders'] ?? 0;
+$total_monthly_orders = $select_monthly_orders->fetchColumn() ?? 0;
 
 // Annual orders
 $sql_annual_orders = "
@@ -87,14 +76,11 @@ $sql_annual_orders = "
       AND status = ?
       " . ($type ? "AND type = ?" : "") . "
 ";
-
 $select_annual_orders = $conn->prepare($sql_annual_orders);
 $params = [$year, $completedStatus->value];
-if ($type)
-    $params[] = $type;
+if ($type) $params[] = $type;
 $select_annual_orders->execute($params);
-$fetch_annual_orders = $select_annual_orders->fetch(PDO::FETCH_ASSOC);
-$total_annual_orders = $fetch_annual_orders['total_annual_orders'] ?? 0;
+$total_annual_orders = $select_annual_orders->fetchColumn() ?? 0;
 
 // Popular products
 $sql_popular = "
@@ -113,11 +99,9 @@ $sql_popular = "
     ORDER BY total_quantity DESC 
     LIMIT 5
 ";
-
 $select_popular_products = $conn->prepare($sql_popular);
 $params = [$completedStatus->value];
-if ($type)
-    $params[] = $type;
+if ($type) $params[] = $type;
 $select_popular_products->execute($params);
 $popular_products = $select_popular_products->fetchAll(PDO::FETCH_ASSOC);
 
@@ -131,20 +115,20 @@ $sql_recent = "
         o.placed_on
     FROM orders o 
     JOIN order_products op ON o.id = op.order_id 
-    WHERE 1=1
+    WHERE YEAR(o.placed_on) = ?
+      AND MONTH(o.placed_on) = ?
       " . ($type ? "AND o.type = ?" : "") . "
     GROUP BY o.id 
     ORDER BY o.placed_on DESC 
     LIMIT 5
 ";
-
 $select_recent_order = $conn->prepare($sql_recent);
-$params = [];
-if ($type)
-    $params[] = $type;
+$params = [$year, $month];
+if ($type) $params[] = $type;
 $select_recent_order->execute($params);
 $recent_orders = $select_recent_order->fetchAll(PDO::FETCH_ASSOC);
 ?>
+
 
 
 <!DOCTYPE html>
@@ -613,18 +597,22 @@ $recent_orders = $select_recent_order->fetchAll(PDO::FETCH_ASSOC);
 
             const typeSelect = document.getElementById('type');
             const monthSelect = document.getElementById('month');
+            const yearSelect = document.getElementById('year');
 
             const initialType = typeSelect.value;
             const initialMonth = monthSelect.value;
+            const initialYear = yearSelect.value;
 
             function checkFilters() {
-                if (typeSelect.value !== initialType || monthSelect.value !== initialMonth) {
+                if (typeSelect.value !== initialType || monthSelect.value !== initialMonth || typeSelect.value !== initialYear) {
                     // Submit the form
                     filterForm.submit();
                 }
             }
 
             typeSelect.addEventListener('change', checkFilters);
+            monthSelect.addEventListener('change', checkFilters);
+            yearSelect.addEventListener('change', checkFilters);
         });
     </script>
 

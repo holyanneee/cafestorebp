@@ -72,11 +72,16 @@ if ($cashier_name) {
     $select_orders = $conn->prepare("
     SELECT 
         o.id AS order_id,
-        MAX(o.name) AS name,
-        MAX(o.email) AS email,
-        MAX(o.placed_on) AS placed_on,
-        MAX(o.status) AS status,
-        MAX(o.type) AS type,
+        o.name,
+        o.email,
+        o.placed_on,
+        o.status,
+        o.address,
+        o.type,
+        o.receipt,
+        o.method,
+        o.number,
+        o.delivery_fee,
         GROUP_CONCAT(op.product_id) AS product_ids,
         (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
         FROM `orders` o 
@@ -108,7 +113,7 @@ if ($cashier_name) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title> All Orders</title>
     <!-- font awesome cdn link  -->
-    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <!-- custom css file link  -->
@@ -435,151 +440,7 @@ if ($cashier_name) {
     <!-- Update Order Modal -->
 
 
-    <!-- Toast Notification -->
-    <div class="toast-container">
-        <div id="updateToast" class="toast align-items-center text-white bg-success" role="alert" aria-live="assertive"
-            aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    Order status updated successfully!
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
-                    aria-label="Close"></button>
-            </div>
-        </div>
-    </div>
 
-    <script>
-        // // check if the bootstrap JavaScript is working
-        // if (typeof bootstrap !== 'undefined') {
-        //     console.log('Bootstrap JavaScript is loaded and working.');
-        // } else {
-        //     console.log('Bootstrap JavaScript is not loaded.');
-        // }
-        // console.log('JavaScript is running');
-        // // For debugging: print orders data to console
-        // console.log(<?= json_encode($orders) ?>);
-        // Initialize components
-        const updateToast = new bootstrap.Toast(document.getElementById('updateToast'));
-        const viewOrderModal = document.getElementById('viewOrderModal');
-
-        // View Order Modal - Load data when shown
-        viewOrderModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            if (viewOrderModal) {
-                viewOrderModal.addEventListener('show.bs.modal', function (event) {
-
-                    // Find the order in the table data
-                    const orderRow = document.querySelector(`tr[data-id="${orderId}"]`);
-                    if (orderRow) {
-                        const orderData = {
-                            id: orderId,
-                            name: orderRow.querySelector('.fw-semibold').textContent,
-                            email: orderRow.querySelector('.text-muted').textContent,
-                            date: orderRow.cells[2].textContent,
-                            total: orderRow.cells[3].textContent,
-                            status: orderRow.querySelector('.status-badge').textContent.trim(),
-                            // Add more fields as needed
-                        };
-
-                        // Update modal title with order ID
-                        document.getElementById('modalOrderId').textContent = orderId;
-
-                        // Build and display order details
-                        const detailsHTML = `
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="order-details mb-2">
-                                <strong>Customer Name:</strong> ${orderData.name}
-                            </div>
-                            <div class="order-details mb-2">
-                                <strong>Email:</strong> ${orderData.email}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="order-details mb-2">
-                                <strong>Order Date:</strong> ${orderData.date}
-                            </div>
-                            <div class="order-details mb-2">
-                                <strong>Status:</strong> <span class="status-badge ${orderData.status.toLowerCase() === 'completed' ? 'status-completed' : 'status-pending'}">
-                                    ${orderData.status}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="order-details mb-3">
-                        <strong>Total Amount:</strong> ${orderData.total}
-                    </div>
-                    <div class="products-list">
-                        <h6 class="fw-bold">Order Information:</h6>
-                        <p>Full order details would be displayed here.</p>
-                    </div>
-                `;
-
-                        document.getElementById('orderDetailsContent').innerHTML = detailsHTML;
-                    }
-                });
-            }
-        });
-
-        // Update Order Modal - Set current status when opening
-        document.querySelectorAll('.btn-update').forEach(button => {
-            button.addEventListener('click', function () {
-                const orderId = this.getAttribute('data-id');
-                const currentStatus = this.getAttribute('data-status');
-
-                document.getElementById('updateOrderId').value = orderId;
-                document.getElementById('updatePaymentStatus').value = currentStatus;
-            });
-        });
-
-        // [Rest of your JavaScript remains the same]
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const dateFilter = document.getElementById('dateFilter');
-            const clearFilters = document.getElementById('clearFilters');
-            const tableRows = document.querySelectorAll('tbody tr');
-
-            function filterOrders() {
-                const dateValue = dateFilter.value;
-
-                let hasVisibleRows = false;
-
-                tableRows.forEach(row => {
-                    const rowDate = row.getAttribute('data-date');
-
-                    let matchesDate = !dateValue || rowDate === dateValue;
-
-                    if (matchesDate) {
-                        row.style.display = '';
-                        hasVisibleRows = true;
-                    } else {
-                        row.style.display = 'none';
-                    }
-                });
-
-                const emptyMessageRow = document.querySelector('.empty-orders-row');
-                if (!hasVisibleRows) {
-                    if (!emptyMessageRow) {
-                        const emptyRow = document.createElement('tr');
-                        emptyRow.classList.add('empty-orders-row');
-                        emptyRow.innerHTML = `<td colspan="6" class="empty-orders">No matching orders found!</td>`;
-                        document.querySelector('tbody').appendChild(emptyRow);
-                    }
-                } else if (emptyMessageRow) {
-                    emptyMessageRow.remove();
-                }
-            }
-
-            dateFilter.addEventListener('change', filterOrders);
-
-            clearFilters.addEventListener('click', function () {
-                dateFilter.value = '';
-                filterOrders();
-            });
-        });
-    </script>
 </body>
 
 </html>

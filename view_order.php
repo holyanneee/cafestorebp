@@ -29,7 +29,10 @@ $stmt = $conn->prepare(" SELECT
                 o.number,
                 o.placed_on,
                 o.status,
+                o.address,
+                o.method,
                 o.type,
+                o.delivery_fee,
                 o.receipt,
                 GROUP_CONCAT(op.product_id) AS product_ids,
                 (SELECT SUM(op.subtotal) FROM `order_products` op WHERE op.order_id = o.id) AS total_price
@@ -158,12 +161,20 @@ $isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Co
                             <p class="mt-1 text-sm text-gray-600">Placed on:
                                 <?= htmlspecialchars($order['placed_on']) ?>
                             </p>
+                            <p class="mt-1 text-sm text-gray-600">Payment Method:
+                                <?= htmlspecialchars(ucwords($order['method'])) ?>
+                            </p>
                             <p class="mt-1 text-sm text-gray-600">Status:
                                 <span
                                     class="inline-block rounded-full px-3 py-1 text-sm font-semibold text-white bg-[<?= $order['status']['color'] ?>]">
                                     <?= $order['status']['label'] ?>
                                 </span>
                             </p>
+
+                            <p class="mt-1 text-sm text-gray-600">Address:
+                                <?= htmlspecialchars($order['address'] ?? 'N/A') ?>
+                            </p>
+
                         </div>
                     </div>
                     <div class="overflow-x-auto">
@@ -221,18 +232,36 @@ $isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Co
                                             <?= $product['quantity'] ?>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            ₱ <?= number_format((float) str_replace(',', '', $product['subtotal']), 2) ?>
+                                            ₱ <?= $product['subtotal'] ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
                             <tfoot>
                                 <tr>
+
                                     <td colspan="3" class="px-6 py-4 text-right font-bold text-gray-900">
-                                        Total:
+                                        <?php if ($order['method'] !== 'pick up'): ?>
+                                            <span class="block">
+                                                Delivery Fee:
+                                            </span>
+                                        <?php endif; ?>
+                                        <span>
+                                            Total:
+                                        </span>
                                     </td>
                                     <td class="px-6 py-4 font-bold text-gray-900">
-                                        ₱ <?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?>
+                                        <?php $total = $order['total_price']?>
+                                        <?php if ($order['method'] !== 'pick up'): ?>
+                                            <span class="block">
+                                                ₱ <?= $order['delivery_fee'] ?>
+                                            </span>
+                                            <?php $total += (float) str_replace(',', '', $order['delivery_fee']) ?>
+                                        <?php endif; ?>
+
+                                        <span>
+                                            ₱ <?= number_format($total, 2) ?>
+                                        </span>
                                     </td>
                                 </tr>
                             </tfoot>

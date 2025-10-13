@@ -38,8 +38,12 @@ $stmt = $conn->prepare(" SELECT
                 o.email,
                 o.placed_on,
                 o.status,
-                  o.address,
-                  o.type,
+                o.address,
+                o.type,
+                o.receipt,
+                o.method,
+                o.number,
+                o.delivery_fee,
                 GROUP_CONCAT(op.product_id) AS product_ids,
                 (SELECT SUM(op.subtotal) FROM `order_products` op WHERE op.order_id = o.id) AS total_price
             FROM `orders` o 

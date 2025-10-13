@@ -21,8 +21,11 @@ class FormatHelper
                 'name' => htmlspecialchars($order['name']),
                 'number' => htmlspecialchars($order['number'] ?? ''),
                 'email' => htmlspecialchars($order['email']),
+                'method' => htmlspecialchars($order['method']),
+                'address' => htmlspecialchars($order['address'] ?? ''),
                 'placed_on' => date('M d, Y', strtotime($order['placed_on'])),
                 'type' => htmlspecialchars($order['type']),
+                'delivery_fee' => number_format((int) $order['delivery_fee'], 2) ?? 0,
                 'receipt' => htmlspecialchars($order['receipt'] ?? ''),
                 'status' => [
                     'value' => htmlspecialchars($order['status']),

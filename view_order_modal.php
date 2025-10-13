@@ -44,13 +44,24 @@
                         </div>
                         <div class="order-details mb-2">
                             <strong>Status:</strong>
-                            <span class="status-badge" style="background-color: <?= $order['status']['color'] ?>; color: white;"><?= $order['status']['label'] ?></span>
+                            <span class="status-badge"
+                                style="background-color: <?= $order['status']['color'] ?>; color: white;"><?= $order['status']['label'] ?></span>
                         </div>
                     </div>
                 </div>
                 <div class="order-details mb-3">
                     <strong>Total Amount:</strong>
-                    ₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?>
+                    <?php
+                    $total = 0;
+                    if ($order['method'] !== 'pick up') {
+                        $total = str_replace(',', '', $order['total_price']) + str_replace(',', '', $order['delivery_fee']);
+                    } else {
+                        $total = str_replace(',', '', $order['total_price']);
+                    }
+
+                    ?>
+                    ₱<?= number_format($total, 2) ?>
+                    <?= ($order['method'] !== 'pick up') ? ' (Including Delivery Fee: ₱' . number_format((float) str_replace(',', '', $order['delivery_fee']), 2) . ')' : '' ?>
                 </div>
                 <h1 class="fw-bold">Order Information:</h1>
 

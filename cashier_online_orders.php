@@ -41,11 +41,16 @@ if (isset($_GET['delete'])) {
 
 // Fetch all orders
 $select_orders = $conn->prepare("    SELECT   o.id AS order_id,
-        MAX(o.name) AS name,
-        MAX(o.email) AS email,
-        MAX(o.placed_on) AS placed_on,
-        MAX(o.status) AS status,
-        MAX(o.type) AS type,
+        o.name,
+        o.email,
+        o.placed_on,
+        o.status,
+        o.address,
+        o.type,
+        o.receipt,
+        o.method,
+        o.number,
+        o.delivery_fee,
         GROUP_CONCAT(op.product_id) AS product_ids,
         (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
         FROM `orders` o 

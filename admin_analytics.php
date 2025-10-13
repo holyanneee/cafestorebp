@@ -3,16 +3,17 @@
 session_start();
 
 $admin_id = $_SESSION['admin_id'] ?? null;
-
 if (!$admin_id) {
     header('location:login.php');
     exit();
 }
 
+// Filters
 $type = isset($_GET['type']) && in_array($_GET['type'], ['coffee', 'religious']) ? $_GET['type'] : null;
+$year = isset($_GET['year']) && is_numeric($_GET['year']) ? (int) $_GET['year'] : (int) date('Y');
+$monthFilter = isset($_GET['month']) && in_array((int)$_GET['month'], range(1, 12)) ? (int) $_GET['month'] : null;
 
-// Current year
-$current_year = date('Y');
+// Analytics arrays
 $earnings = [];
 $monthly_orders = [];
 $topFiveProducts = [];
@@ -22,9 +23,11 @@ $earningsByType = [];
 // Dynamic condition for filtering
 $typeCondition = $type ? "AND o.type = :type" : "";
 
-// Monthly Analytics
-for ($month = 1; $month <= 12; $month++) {
-    $start_date = "$current_year-$month-01";
+// MONTHLY ANALYTICS
+$monthsToProcess = $monthFilter ? [$monthFilter] : range(1, 12);
+
+foreach ($monthsToProcess as $month) {
+    $start_date = "$year-$month-01";
     $end_date = date("Y-m-t", strtotime($start_date));
 
     // Monthly earnings
@@ -33,19 +36,16 @@ for ($month = 1; $month <= 12; $month++) {
         FROM order_products op 
         JOIN orders o ON op.order_id = o.id 
         WHERE o.placed_on BETWEEN :start_date AND :end_date 
-          AND YEAR(o.placed_on) = :current_year
+          AND YEAR(o.placed_on) = :year
           $typeCondition
     ";
-
     $stmt = $conn->prepare($earnings_query);
     $params = [
         ':start_date' => $start_date,
         ':end_date' => $end_date,
-        ':current_year' => $current_year
+        ':year' => $year
     ];
-    if ($type)
-        $params[':type'] = $type;
-
+    if ($type) $params[':type'] = $type;
     $stmt->execute($params);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     $earnings[] = (float) ($row['total_earnings'] ?? 0);
@@ -55,26 +55,23 @@ for ($month = 1; $month <= 12; $month++) {
         SELECT COUNT(*) AS total_orders 
         FROM orders 
         WHERE placed_on BETWEEN :start_date AND :end_date 
-          AND YEAR(placed_on) = :current_year
+          AND YEAR(placed_on) = :year
           " . ($type ? "AND type = :type" : "") . "
     ";
-
     $stmt = $conn->prepare($orders_query);
     $params = [
         ':start_date' => $start_date,
         ':end_date' => $end_date,
-        ':current_year' => $current_year
+        ':year' => $year
     ];
-    if ($type)
-        $params[':type'] = $type;
-
+    if ($type) $params[':type'] = $type;
     $stmt->execute($params);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     $monthly_orders[] = (int) ($row['total_orders'] ?? 0);
     $soldProductsPerMonth[] = (int) ($row['total_orders'] ?? 0);
 }
 
-// Top 5 Products
+// TOP 5 PRODUCTS
 $topFiveProductsQuery = "
     SELECT 
         op.product_id, 
@@ -84,21 +81,21 @@ $topFiveProductsQuery = "
     FROM order_products op 
     JOIN products p ON op.product_id = p.id 
     JOIN orders o ON op.order_id = o.id
-    " . ($type ? "WHERE o.type = :type" : "") . "
+    WHERE YEAR(o.placed_on) = :year
+    " . ($monthFilter ? "AND MONTH(o.placed_on) = :month " : "") . "
+    " . ($type ? "AND o.type = :type " : "") . "
     GROUP BY op.product_id 
     ORDER BY earnings DESC 
     LIMIT 5
 ";
-
 $stmt = $conn->prepare($topFiveProductsQuery);
-if ($type) {
-    $stmt->execute([':type' => $type]);
-} else {
-    $stmt->execute();
-}
+$params = [':year' => $year];
+if ($monthFilter) $params[':month'] = $monthFilter;
+if ($type) $params[':type'] = $type;
+$stmt->execute($params);
 $topFiveProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Earnings by Product Type (Overall)
+// EARNINGS BY PRODUCT TYPE
 $productTypesQuery = "
     SELECT 
         p.type, 
@@ -106,15 +103,19 @@ $productTypesQuery = "
     FROM order_products op 
     JOIN products p ON op.product_id = p.id 
     JOIN orders o ON op.order_id = o.id
+    WHERE YEAR(o.placed_on) = :year
+    " . ($monthFilter ? "AND MONTH(o.placed_on) = :month " : "") . "
     GROUP BY p.type
 ";
-
 $stmt = $conn->prepare($productTypesQuery);
-$stmt->execute();
+$params = [':year' => $year];
+if ($monthFilter) $params[':month'] = $monthFilter;
+$stmt->execute($params);
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $earningsByType[$row['type']] = (float) $row['total_earnings'];
 }
 ?>
+
 
 
 <!DOCTYPE html>
@@ -338,10 +339,10 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             <div class="container-fluid">
                 <div class="d-flex align-items-center justify-content-between mb-5">
                     <h1 class="h2 mb-0 text-gray-800">Overview</h1>
-                    <form method="get" id="filters">
+                    <form method="get" id="filters" class="d-flex align-items-center">
                         <!-- Type Filter -->
-                        <div class="d-flex ">
-                            <label for="type" class="me-2">Filter by Type:</label>
+                        <div class="d-flex align-items-center">
+                            <label for="type" class="me-2">Type:</label>
                             <select name="type" class="form-select" id="type">
                                 <option value="">All Types</option>
                                 <option value="coffee" <?= $type === 'coffee' ? 'selected' : ''; ?>>Coffee</option>
@@ -349,9 +350,38 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                                 </option>
                             </select>
                         </div>
-                        <!-- Month -->
-                        
 
+                        <!-- Month Filter -->
+                        <div class="d-flex align-items-center ms-3">
+                            <label for="month" class="me-2">Month:</label>
+                            <select name="month" class="form-select" id="month">
+                                <option value="">All Months</option>
+                                <?php
+                                for ($m = 1; $m <= 12; $m++) {
+                                    $monthName = date('F', mktime(0, 0, 0, $m, 10));
+                                    $selected = (isset($_GET['month']) && $_GET['month'] == $m) ? 'selected' : '';
+                                    echo "<option value='$m' $selected>$monthName</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+
+                        <!-- Year Filter -->
+                        <div class="d-flex align-items-center ms-3">
+                            <label for="year" class="me-2">Year:</label>
+                            <select name="year" class="form-select" id="year">
+                                <?php
+                                $currentYear = date('Y');
+                                for ($y = $currentYear; $y >= $currentYear - 5; $y--) {
+                                    $selected = (isset($_GET['year']) && $_GET['year'] == $y) ? 'selected' : '';
+                                    echo "<option value='$y' $selected>$y</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+                        <div>
+                            <a href="admin_overview.php" class="btn btn-sm btn-secondary ms-2 mt-0">Reset</a>
+                        </div>
                     </form>
                 </div>
 
@@ -359,13 +389,13 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <div class="card p-3">
-                            <h5>Total Earnings (<?= $current_year ?>)</h5>
+                            <h5>Total Earnings (<?= $year ?>)</h5>
                             <h3>₱<?php echo number_format(array_sum($earnings), 2); ?></h3>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="card p-3">
-                            <h5>Total Orders (<?= $current_year ?>)</h5>
+                            <h5>Total Orders (<?= $year ?>)</h5>
                             <h3><?php echo array_sum($monthly_orders); ?></h3>
                         </div>
                     </div>
@@ -470,17 +500,23 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             const filterForm = document.getElementById('filters');
 
             const typeSelect = document.getElementById('type');
+            const monthSelect = document.getElementById('month');
+            const yearSelect = document.getElementById('year');
 
             const initialType = typeSelect.value;
+            const initialMonth = monthSelect.value;
+            const initialYear = yearSelect.value;
 
             function checkFilters() {
-                if (typeSelect.value !== initialType) {
+                if (typeSelect.value !== initialType || monthSelect.value !== initialMonth || typeSelect.value !== initialYear) {
                     // Submit the form
                     filterForm.submit();
                 }
             }
 
             typeSelect.addEventListener('change', checkFilters);
+            monthSelect.addEventListener('change', checkFilters);
+            yearSelect.addEventListener('change', checkFilters);
         });
     </script>
 
