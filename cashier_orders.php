@@ -82,6 +82,7 @@ if ($cashier_name) {
         o.method,
         o.number,
         o.delivery_fee,
+        o.is_walk_in,
         GROUP_CONCAT(op.product_id) AS product_ids,
         (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
         FROM `orders` o 
@@ -315,6 +316,7 @@ if ($cashier_name) {
                             <th style="width: 12%">DATE</th>
                             <th style="width: 12%">TOTAL</th>
                             <th style="width: 12%">STATUS</th>
+                            <th style="width: 12%">TYPE</th>
                             <th style="width: 18%">ACTIONS</th>
                         </tr>
                     </thead>
@@ -348,6 +350,7 @@ if ($cashier_name) {
                                             <?= $order['status']['label'] ?>
                                         </span>
                                     </td>
+                                    bar
                                     <td>
                                         <?php if ($order['status']['value'] === 'completed'): ?>
                                             <button class="action-btn btn-view" data-bs-toggle="modal"
@@ -437,7 +440,12 @@ if ($cashier_name) {
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Update Order Modal -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+   <script>
+      setInterval(() => {
+         <?=   @include 'newOrderALert.php'; ?>
+      }, 5000); // Check every 5 seconds
+   </script>
 
 
 

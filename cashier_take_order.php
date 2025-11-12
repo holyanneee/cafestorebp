@@ -1,4 +1,7 @@
 <?php
+ require_once 'enums/OrderStatusEnum.php';
+use Enums\OrderStatusEnum;
+
 @include 'config.php';
 session_start();
 
@@ -8,6 +11,7 @@ if (!$admin_id) {
    header('location:login.php');
    exit;
 }
+$preparingStatus = OrderStatusEnum::Preparing;
 
 // require('fpdf/fpdf.php');
 
@@ -39,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_data'])) {
    }
 
    // process the order 
-   $insert = $conn->prepare("INSERT INTO orders (user_id, name, number, email, method, address, placed_on, updated_by_cashier, receipt, is_walk_in) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+   $insert = $conn->prepare("INSERT INTO orders (user_id, name, number, email, method, address, placed_on, updated_by_cashier, receipt, is_walk_in, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
    $insert->execute([
       $admin_id,
       'Walk-in Customer',
@@ -50,7 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_data'])) {
       $placed_on,
       $cashier_name,
       '',
-      true
+      true,
+      $preparingStatus->value
    ]);
 
    // Get the last inserted order ID

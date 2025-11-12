@@ -34,6 +34,7 @@ $stmt = $conn->prepare(" SELECT
                 o.type,
                 o.delivery_fee,
                 o.receipt,
+                o.is_walk_in,
                 GROUP_CONCAT(op.product_id) AS product_ids,
                 (SELECT SUM(op.subtotal) FROM `order_products` op WHERE op.order_id = o.id) AS total_price
             FROM `orders` o 
@@ -53,7 +54,7 @@ if (empty($order)) {
 $statusEnumCases = OrderStatusEnum::cases();
 
 
-$isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Completed->value && $order['receipt'] !== '');
+$isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Completed->value && !$order['is_walk_in'] && $order['receipt'] !== '');
 
 ?>
 <script>
@@ -94,7 +95,7 @@ $isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Co
                             class="inline-block rounded bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring active:bg-gray-400">Back
                             to Orders</a>
                         <?php if ($isOrderCompleted): ?>
-                            <a href="generate_invoice.php?order_id=<?= htmlspecialchars($order['order_id']) ?>"
+                            <a href="receipt.php?order_id=<?= htmlspecialchars($order['order_id']) ?>"
                                 class="inline-block rounded bg-color px-4 py-2 text-sm font-medium text-white hover:bg-hover-color focus:outline-none focus:ring active:bg-indigo-600">
                                 Invoice</a>
 
@@ -110,17 +111,31 @@ $isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Co
 
                         <div>
                             <?php
+                            // Filter status cases based on the method
+                            $filteredStatusEnumCases = array_filter($statusEnumCases, function ($statusCase) use ($order) {
+                                if ($order['method'] === 'cash on delivery' && $statusCase->value === 'pick-up') {
+                                    return false;
+                                }
+                                if ($order['method'] === 'pick up' && $statusCase->value === 'on the way') {
+                                    return false;
+                                }
+                                return true;
+                            });
+
+                            // Reindex the filtered cases
+                            $filteredStatusEnumCases = array_values($filteredStatusEnumCases);
+
                             // Find current status index
                             $currentIndex = array_search(
                                 $order['status']['value'],
-                                array_column($statusEnumCases, 'value')
+                                array_column($filteredStatusEnumCases, 'value')
                             );
 
                             // If not found, default to 0
                             $currentIndex = $currentIndex === false ? 0 : $currentIndex;
 
                             // Total steps
-                            $totalSteps = count($statusEnumCases);
+                            $totalSteps = count($filteredStatusEnumCases);
 
                             // Progress percentage (completed steps ÷ total steps)
                             $progressPercent = (($currentIndex + 1) / $totalSteps) * 100;
@@ -134,7 +149,7 @@ $isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Co
 
                             <!-- Step Labels -->
                             <ol class="mt-4 grid grid-cols-<?= $totalSteps ?> text-sm font-medium text-gray-500">
-                                <?php foreach ($statusEnumCases as $index => $statusCase):
+                                <?php foreach ($filteredStatusEnumCases as $index => $statusCase):
                                     $isCompleted = $index <= $currentIndex;
                                     ?>
                                     <li

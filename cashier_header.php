@@ -12,6 +12,7 @@
 <body>
 
    <?php
+  
    if (isset($message)) {
       foreach ($message as $message) {
          echo '
@@ -54,7 +55,6 @@
 
 
    <script src="js/admin_profile.js"></script>
-
 </body>
 
 </html>

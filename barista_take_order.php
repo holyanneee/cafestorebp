@@ -61,6 +61,7 @@ $select_orders = $conn->prepare("
         o.method,
         o.number,
         o.delivery_fee,
+        o.is_walk_in,
         GROUP_CONCAT(op.product_id) AS product_ids,
         (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
     FROM `orders` o 

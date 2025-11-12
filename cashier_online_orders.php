@@ -41,7 +41,7 @@ if (isset($_GET['delete'])) {
 
 // Fetch all orders
 $select_orders = $conn->prepare("    SELECT   o.id AS order_id,
-        o.name,
+  o.name,
         o.email,
         o.placed_on,
         o.status,
@@ -51,6 +51,7 @@ $select_orders = $conn->prepare("    SELECT   o.id AS order_id,
         o.method,
         o.number,
         o.delivery_fee,
+        o.is_walk_in,
         GROUP_CONCAT(op.product_id) AS product_ids,
         (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
         FROM `orders` o 
@@ -468,7 +469,12 @@ $orders = FormatHelper::formatOrders($orders, $conn);
 
     </script>
 
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        setInterval(() => {
+            <?= @include 'newOrderALert.php'; ?>
+        }, 5000); // Check every 5 seconds
+    </script>
 </body>
 
 </html>

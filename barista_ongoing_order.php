@@ -8,6 +8,10 @@ use Helpers\FormatHelper;
 use Enums\OrderStatusEnum;
 
 $preparingStatus = OrderStatusEnum::Preparing;
+$onTheWayStatus = OrderStatusEnum::OnTheWay;
+$pickUpStatus = OrderStatusEnum::PickUp;
+$completedStatus = OrderStatusEnum::Completed;
+
 $admin_id = $_SESSION['barista_id'] ?? null;
 $barista = $_SESSION['barista_name'] ?? 'Unknown'; // Fetch the cashier's name
 if (!$admin_id) {
@@ -27,12 +31,35 @@ if (isset($_GET['order_id'])) {
         header('location:barista_ongoing_order.php');
         exit();
     }
-    if ($order['is_walk_in']) {
-        $status = OrderStatusEnum::Completed->value;
+
+
+    
+
+
+    // Redirect to the same page to avoid resubmission
+    header('location:barista_orders.php');
+    exit();
+}
+
+if (isset($_POST['update_order']) && isset($_POST['is_ajax'])) {
+    $order_id = filter_var($_POST['order_id'], FILTER_VALIDATE_INT);
+    $update_payment = filter_var($_POST['update_payment'], FILTER_SANITIZE_SPECIAL_CHARS);
+
+    if (!$order_id || !$update_payment) {
+        error_log("Invalid input for order update.");
+        http_response_code(400); // Bad Request
+        exit();
     }
 
-    $update_orders = $conn->prepare("UPDATE `orders` SET status = ?, updated_by_barista = ? WHERE id = ?");
-    $update_orders->execute([$status, $barista, $order_id]);
+    // Fetch current status
+    $stmt = $conn->prepare("SELECT status FROM `orders` WHERE id = ?");
+    $stmt->execute([$order_id]);
+    $current_order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($current_order && $current_order['status'] === $preparingStatus->value && $update_payment === 'completed') {
+  
+        $update_orders = $conn->prepare("UPDATE `orders` SET status = ?, updated_by_barista = ? WHERE id = ?");
+    $update_orders->execute([$completedStatus->value, $barista, $order_id]);
 
     // deduct the stock of products in order_products
     $select_order_products = $conn->prepare("SELECT * FROM `order_products` WHERE order_id = ?");
@@ -70,30 +97,26 @@ if (isset($_GET['order_id'])) {
         }
 
     }
+        header('location:barista_ongoing_order.php');
+        exit();
+    }
 
+    try {
+        $update_orders = $conn->prepare("UPDATE `orders` SET status = ? WHERE id = ?");
+        $update_orders->execute([$update_payment, $order_id]);
+        http_response_code(200); // OK
 
-    // Redirect to the same page to avoid resubmission
-    header('location:barista_orders.php');
-    exit();
+        header('location:barista_ongoing_order.php');
+        exit();
+
+    } catch (PDOException $e) {
+        error_log("Error updating order status: " . $e->getMessage());
+        http_response_code(500); // Internal Server Error
+        echo json_encode(['success' => false, 'message' => 'Failed to update order.']);
+        exit();
+    }
 }
 
-
-
-
-
-// Handle regular form submission
-if (isset($_POST['update_order'])) {
-    $order_id = $_POST['order_id'];
-    $update_payment = $_POST['update_payment'];
-    $update_payment = filter_var($update_payment, FILTER_SANITIZE_STRING);
-
-    // Update both payment status and cashier in the orders table
-    $update_orders = $conn->prepare("UPDATE `orders` SET status = ?, updated_by_cashier = ? WHERE id = ?");
-    $update_orders->execute([$update_payment, $barista, $order_id]);
-
-    header('location:cashier_online_orders.php');
-    exit();
-}
 
 if (isset($_GET['delete'])) {
     $delete_id = $_GET['delete'];
@@ -106,20 +129,27 @@ if (isset($_GET['delete'])) {
 $select_orders = $conn->prepare("
     SELECT 
         o.id AS order_id,
-        o.name,
+ o.name,
         o.email,
         o.placed_on,
         o.status,
+        o.address,
         o.type,
+        o.receipt,
+        o.method,
+        o.number,
+        o.delivery_fee,
+        o.is_walk_in,
+
         GROUP_CONCAT(op.product_id) AS product_ids,
         (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
     FROM `orders` o 
     LEFT JOIN `order_products` op ON o.id = op.order_id
-    WHERE o.status = ?   AND o.type = 'coffee'
+    WHERE o.status IN (?, ?, ?) AND o.type = 'coffee'
     GROUP BY o.id
 ");
 
-$select_orders->execute([$preparingStatus->value]);
+$select_orders->execute([$preparingStatus->value, $onTheWayStatus->value, $pickUpStatus->value]);
 $orders = $select_orders->fetchAll(PDO::FETCH_ASSOC);
 
 
@@ -344,6 +374,7 @@ $orders = FormatHelper::formatOrders($orders, $conn);
                             <th style="width: 12%">DATE</th>
                             <th style="width: 12%">TOTAL</th>
                             <th style="width: 12%">STATUS</th>
+                            <th style="width: 12%">TYPE</th>
                             <th style="width: 18%">ACTIONS</th>
                         </tr>
                     </thead>
@@ -372,6 +403,7 @@ $orders = FormatHelper::formatOrders($orders, $conn);
                                             <?= $order['status']['label'] ?>
                                         </span>
                                     </td>
+                                    <td><?= ($order['is_walk_in'] ? 'Walk In' : 'Online') ?></td>
                                     <td>
                                         <button class="action-btn btn-view" data-bs-toggle="modal"
                                             data-bs-target="#viewOrderModal-<?= $order['order_id'] ?>">
@@ -379,10 +411,56 @@ $orders = FormatHelper::formatOrders($orders, $conn);
                                         </button>
                                         <!-- modal -->
                                         <?php include 'view_order_modal.php'; ?>
-                                        <a href="barista_ongoing_order.php?order_id=<?= $order['order_id'] ?>"
-                                            class="action-btn btn-update" style="text-decoration: none;">
-                                            Complete the Order
-                                        </a>
+                                        <button class="action-btn btn-update" data-bs-toggle="modal"
+                                            data-bs-target="#updateOrderModal-<?= $order['order_id'] ?>">
+                                            Update status
+                                        </button>
+                                        <div class="modal fade" id="updateOrderModal-<?= $order['order_id'] ?>" tabindex="-1"
+                                            aria-labelledby="updateOrderModalLabel-<?= $order['order_id'] ?>"
+                                            aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title"
+                                                            id="updateOrderModalLabel-<?= $order['order_id'] ?>">Update Order
+                                                            Status
+                                                        </h5>
+                                                        <button type="button" class="btn-close btn-close-white"
+                                                            data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <form method="POST" id="updateOrderForm-<?= $order['order_id'] ?>">
+                                                        <input type="hidden" name="order_id" value="<?= $order['order_id'] ?>">
+                                                        <input type="hidden" name="is_ajax" value="1">
+                                                        <div class="modal-body">
+                                                            <div class="mb-3">
+                                                                <label for="updatePaymentStatus-<?= $order['order_id'] ?>"
+                                                                    class="form-label">Payment
+                                                                    Status</label>
+                                                                <select class="form-select form-select-sm" name="update_payment"
+                                                                    id="updatePaymentStatus-<?= $order['order_id'] ?>">
+                                                                    <?php foreach (OrderStatusEnum::cases() as $status): ?>
+                                                                        <?php if (
+                                                                            ($order['method'] === 'cash on delivery' && $status->value !== OrderStatusEnum::PickUp->value) ||
+                                                                            ($order['method'] === 'pick up' && $status->value !== OrderStatusEnum::OnTheWay->value) ||
+                                                                            ($order['method'] !== 'cash on delivery' && $order['method'] !== 'pick up')
+                                                                        ): ?>
+                                                                            <option value="<?= $status->value ?>"
+                                                                                <?= $order['status']['value'] == $status->value ? 'selected' : '' ?>><?= $status->label() ?></option>
+                                                                        <?php endif; ?>
+                                                                    <?php endforeach; ?>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary btn-sm"
+                                                                data-bs-dismiss="modal">Cancel</button>
+                                                            <button type="submit" name="update_order"
+                                                                class="btn btn-primary btn-sm">Update Status</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

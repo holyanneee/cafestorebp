@@ -29,7 +29,33 @@ if (!isset($admin_id)) {
 
    <!-- custom css file link  -->
    <link rel="stylesheet" href="css/admin_style.css">
+   <style>
+      .button-container {
+         margin-top: 100px;
+         display: flex;
+         justify-content: center;
+         gap: 60px;
+      }
 
+      .big-button {
+         padding: 35px 60px;
+         font-size: 2.5rem;
+         font-weight: bold;
+         background-color: #2ecc71;
+         color: #fff;
+         text-decoration: none;
+         border: none;
+         border-radius: 0;
+         /* sharp corners */
+         cursor: pointer;
+         transition: background-color 0.3s ease;
+         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .big-button:hover {
+         background-color: #27ae60;
+      }
+   </style>
 </head>
 
 <body>
@@ -107,34 +133,14 @@ if (!isset($admin_id)) {
    </section>
 
    <script src="js/script.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+   <script>
+      setInterval(() => {
+         <?=   @include 'newOrderALert.php'; ?>
+      }, 5000); // Check every 5 seconds
+   </script>
+
 
 </body>
 
 </html>
-<style>
-   .button-container {
-      margin-top: 100px;
-      display: flex;
-      justify-content: center;
-      gap: 60px;
-   }
-
-   .big-button {
-      padding: 35px 60px;
-      font-size: 2.5rem;
-      font-weight: bold;
-      background-color: #2ecc71;
-      color: #fff;
-      text-decoration: none;
-      border: none;
-      border-radius: 0;
-      /* sharp corners */
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-   }
-
-   .big-button:hover {
-      background-color: #27ae60;
-   }
-</style>

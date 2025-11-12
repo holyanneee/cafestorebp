@@ -27,6 +27,7 @@ class FormatHelper
                 'type' => htmlspecialchars($order['type']),
                 'delivery_fee' => number_format((int) $order['delivery_fee'], 2) ?? 0,
                 'receipt' => htmlspecialchars($order['receipt'] ?? ''),
+                'is_walk_in' => (bool)$order['is_walk_in'],
                 'status' => [
                     'value' => htmlspecialchars($order['status']),
                     'label' => OrderStatusEnum::from($order['status'])->label(),

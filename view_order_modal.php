@@ -53,7 +53,7 @@
                     <strong>Total Amount:</strong>
                     <?php
                     $total = 0;
-                    if ($order['method'] !== 'pick up') {
+                    if ($order['method'] !== 'pick up' && !$order['is_walk_in']) {
                         $total = str_replace(',', '', $order['total_price']) + str_replace(',', '', $order['delivery_fee']);
                     } else {
                         $total = str_replace(',', '', $order['total_price']);
@@ -61,7 +61,7 @@
 
                     ?>
                     ₱<?= number_format($total, 2) ?>
-                    <?= ($order['method'] !== 'pick up') ? ' (Including Delivery Fee: ₱' . number_format((float) str_replace(',', '', $order['delivery_fee']), 2) . ')' : '' ?>
+                    <?= ($order['method'] !== 'pick up' && !$order['is_walk_in']) ? ' (Including Delivery Fee: ₱' . number_format((float) str_replace(',', '', $order['delivery_fee']), 2) . ')' : '' ?>
                 </div>
                 <h1 class="fw-bold">Order Information:</h1>
 
