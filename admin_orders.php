@@ -50,6 +50,7 @@ $select_orders = $conn->prepare("
         o.method,
         o.number,
         o.delivery_fee,
+        o.is_walk_in,
         GROUP_CONCAT(op.product_id) AS product_ids,
         (SELECT SUM(op2.subtotal) FROM `order_products` op2 WHERE op2.order_id = o.id) AS total_price
     FROM `orders` o 
@@ -289,6 +290,7 @@ $orders = FormatHelper::formatOrders($orders, $conn);
                             <th style="width: 12%">DATE</th>
                             <th style="width: 12%">TOTAL</th>
                             <th style="width: 12%">STATUS</th>
+                            <th style="width: 18%">TYPE</th>
                             <th style="width: 18%">ACTIONS</th>
                         </tr>
                     </thead>
@@ -319,6 +321,7 @@ $orders = FormatHelper::formatOrders($orders, $conn);
                                             <?= $order['status']['label'] ?>
                                         </span>
                                     </td>
+                                    <td><?= ($order['is_walk_in'] ? 'Walk In' : 'Online') ?></td>
                                     <td>
                                         <button class="action-btn btn-view" data-bs-toggle="modal"
                                             data-bs-target="#viewOrderModal-<?= $order['order_id'] ?>">

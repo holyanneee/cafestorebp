@@ -345,12 +345,13 @@ if ($cashier_name) {
                                     </td>
                                     <td><?= $order_date ?></td>
                                     <td>₱<?= number_format((float) str_replace(',', '', $order['total_price']), 2) ?></td>
+                             
                                     <td>
                                         <span class="status-badge" style="background-color: <?= $order['status']['color'] ?>; color: white;">
                                             <?= $order['status']['label'] ?>
                                         </span>
                                     </td>
-                                    bar
+                                    <td><?= ($order['is_walk_in'] ? 'Walk In' : 'Online') ?></td>
                                     <td>
                                         <?php if ($order['status']['value'] === 'completed'): ?>
                                             <button class="action-btn btn-view" data-bs-toggle="modal"

@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout'])) {
       $stmt->execute([$user_id, $name, $number, $email, $method, $address, $type, $delivery_fee]);
       $orderId = $conn->lastInsertId();
 
- 
+
       $query = $isCoffee
          ? "INSERT INTO order_products 
                 (order_id, product_id, quantity, price, subtotal, ingredients, cup_sizes, add_ons)
@@ -228,96 +228,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout'])) {
                      class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                </div>
 
-               <script>
-                  document.addEventListener('DOMContentLoaded', () => {
-                     const methodSelect = document.getElementById('method');
-                     const qrCodeDiv = document.getElementById('qrcode');
-                     const addressContainer = document.getElementById('addressContainer');
-                     const citySelect = document.getElementById('city');
-                     const barangaySelect = document.getElementById('barangay');
-                     const addressTextarea = document.getElementById('address');
-
-                     // Load barangays dynamically based on selected city
-                     citySelect.addEventListener('change', async () => {
-                        const cityCode = citySelect.value;
-                        barangaySelect.innerHTML = '<option value="">Loading barangays...</option>';
-                        barangaySelect.disabled = true;
-
-                        if (!cityCode) {
-                           barangaySelect.innerHTML = '<option value="">Select a barangay</option>';
-                           return;
-                        }
-
-                        try {
-                           const barangaysResponse = await fetch(`https://psgc.gitlab.io/api/cities-municipalities/${cityCode}/barangays/`);
-                           const barangays = await barangaysResponse.json();
-
-                           barangaySelect.innerHTML = '<option value="">Select a barangay</option>';
-                           barangays.forEach(barangay => {
-                              const option = document.createElement('option');
-                              option.value = barangay.name;
-                              option.textContent = barangay.name;
-                              barangaySelect.appendChild(option);
-                           });
-
-                           barangaySelect.disabled = false;
-                        } catch (error) {
-                           console.error('Error loading barangays:', error);
-                           barangaySelect.innerHTML = '<option value="">Failed to load barangays</option>';
-                        }
-                     });
-
-                     // Auto-fill address textarea
-                     barangaySelect.addEventListener('change', () => {
-                        const selectedBarangay = barangaySelect.options[barangaySelect.selectedIndex]?.text || '';
-                        const selectedCity = citySelect.options[citySelect.selectedIndex]?.text || '';
-                        if (selectedBarangay && selectedCity) {
-                           addressTextarea.value = `${selectedBarangay}, ${selectedCity}, Laguna`;
-                        }
-                     });
-
-                     // Payment logic
-                     methodSelect.addEventListener('change', () => {
-                        const selectedMethod = methodSelect.value;
-                        const message = document.createElement('p');
-
-                        message.classList.add('text-center', 'text-sm', 'text-gray-600');
-                        qrCodeDiv.innerHTML = '';
-
-                        if (selectedMethod === 'gcash') {
-                           const qrImg = document.createElement('img');
-                           qrImg.src = "images/gcash.png";
-                           qrImg.alt = 'GCash QR Code';
-                           qrImg.classList.add('w-32', 'h-32', 'mx-auto', 'my-4');
-                           qrCodeDiv.appendChild(qrImg);
-                           message.textContent = 'Scan the GCash QR code to pay.';
-                           addressContainer.style.display = 'block';
-                        }
-                        else if (selectedMethod === 'paypal') {
-                           const qrImg = document.createElement('img');
-                           qrImg.src = "images/paypal.jpg";
-                           qrImg.alt = 'PayPal QR Code';
-                           qrImg.classList.add('w-32', 'h-32', 'mx-auto', 'my-4');
-                           qrCodeDiv.appendChild(qrImg);
-                           message.textContent = 'Scan the PayPal QR code to pay.';
-                           addressContainer.style.display = 'block';
-                        }
-                        else if (selectedMethod === 'pick up') {
-                           addressContainer.style.display = 'none';
-                           message.textContent = 'You can pick up your order at Kape Milagrosa, Purok 3, 0356 Chico St, Calauan, 4012 Laguna';
-                        }
-                        else if (selectedMethod === 'cash on delivery') {
-                           addressContainer.style.display = 'block';
-                           message.textContent = '';
-                        }
-                        else {
-                           addressContainer.style.display = 'none';
-                        }
-
-                        qrCodeDiv.appendChild(message);
-                     });
-                  });
-               </script>
 
                <div class="flex justify-end space-x-3">
                   <a href="cart.php"
@@ -353,6 +263,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['checkout'])) {
       </script>
    <?php endif; ?>
 
+   <script>
+      document.addEventListener('DOMContentLoaded', () => {
+         const methodSelect = document.getElementById('method');
+         const qrCodeDiv = document.getElementById('qrcode');
+         const addressContainer = document.getElementById('addressContainer');
+         const municipalitySelect = document.getElementById('municipality');
+         const barangaySelect = document.getElementById('barangay');
+         const addressTextarea = document.getElementById('address');
+
+         // Load barangays dynamically based on selected municipality
+         municipalitySelect.addEventListener('change', async () => {
+            const municipalityCode = municipalitySelect.value;
+            barangaySelect.innerHTML = '<option value="">Loading barangays...</option>';
+            barangaySelect.disabled = true;
+
+            if (!municipalityCode) {
+               barangaySelect.innerHTML = '<option value="">Select a barangay</option>';
+               return;
+            }
+
+            try {
+               const barangaysResponse = await fetch(`https://psgc.gitlab.io/api/municipalities/${municipalityCode}/barangays`);
+               const barangays = await barangaysResponse.json();
+
+               barangaySelect.innerHTML = '<option value="">Select a barangay</option>';
+               barangays.forEach(barangay => {
+                  const option = document.createElement('option');
+                  option.value = barangay.name;
+                  option.textContent = barangay.name;
+                  barangaySelect.appendChild(option);
+               });
+
+               barangaySelect.disabled = false;
+            } catch (error) {
+               console.error('Error loading barangays:', error);
+               barangaySelect.innerHTML = '<option value="">Failed to load barangays</option>';
+            }
+         });
+
+         // Auto-fill address textarea
+         barangaySelect.addEventListener('change', () => {
+            const selectedBarangay = barangaySelect.options[barangaySelect.selectedIndex]?.text || '';
+            const selectedCity = citySelect.options[citySelect.selectedIndex]?.text || '';
+            if (selectedBarangay && selectedCity) {
+               addressTextarea.value = `${selectedBarangay}, ${selectedCity}, Laguna`;
+            }
+         });
+
+         // Payment logic
+         methodSelect.addEventListener('change', () => {
+            const selectedMethod = methodSelect.value;
+            const message = document.createElement('p');
+
+            message.classList.add('text-center', 'text-sm', 'text-gray-600');
+            qrCodeDiv.innerHTML = '';
+
+            if (selectedMethod === 'gcash') {
+               const qrImg = document.createElement('img');
+               qrImg.src = "images/gcash.png";
+               qrImg.alt = 'GCash QR Code';
+               qrImg.classList.add('w-32', 'h-32', 'mx-auto', 'my-4');
+               qrCodeDiv.appendChild(qrImg);
+               message.textContent = 'Scan the GCash QR code to pay.';
+               addressContainer.style.display = 'block';
+            }
+            else if (selectedMethod === 'paypal') {
+               const qrImg = document.createElement('img');
+               qrImg.src = "images/paypal.jpg";
+               qrImg.alt = 'PayPal QR Code';
+               qrImg.classList.add('w-32', 'h-32', 'mx-auto', 'my-4');
+               qrCodeDiv.appendChild(qrImg);
+               message.textContent = 'Scan the PayPal QR code to pay.';
+               addressContainer.style.display = 'block';
+            }
+            else if (selectedMethod === 'pick up') {
+               addressContainer.style.display = 'none';
+               message.textContent = 'You can pick up your order at Kape Milagrosa, Purok 3, 0356 Chico St, Calauan, 4012 Laguna';
+            }
+            else if (selectedMethod === 'cash on delivery') {
+               addressContainer.style.display = 'block';
+               message.textContent = '';
+            }
+            else {
+               addressContainer.style.display = 'none';
+            }
+
+            qrCodeDiv.appendChild(message);
+         });
+      });
+   </script>
 
 </body>
 
