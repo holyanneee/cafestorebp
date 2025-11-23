@@ -18,35 +18,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
    $stmt->execute([$email]);
    $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-   if (!$row || !password_verify($password, $row['password'])) {
-      // If the user doesn't exist or password mismatch
-      $alert = [
+   if (!$row) {
+       $_SESSION['alert'] = [
          'type' => 'error',
          'message' => 'Incorrect email or password!'
       ];
-   } else {
-      // Role → Redirect map
-      $roleRedirects = [
-         'admin' => 'admin_page.php',
-         'user' => 'index.php',
-         'cashier' => 'cashier_page.php',
-         'barista' => 'barista_page.php',
-      ];
-
-      // Store session with a consistent pattern
-      $role = strtolower($row['role']);
-      if (isset($roleRedirects[$role])) {
-         $_SESSION[$role . '_id'] = $row['id'];
-         $_SESSION[$role . '_name'] = $row['name'];
-         header('Location: ' . $roleRedirects[$role]);
-         exit;
-      } else {
-         $alert = [
-            'type' => 'error',
-            'message' => 'Unknown user role!'
-         ];
-      }
+      header('Location: login.php');
+      exit;
    }
+
+   // Check if the user is verified
+   if (!$row['email_verified_at']) {
+       $_SESSION['alert'] = [
+         'type' => 'error',
+         'message' => 'Please verify your email before logging in.'
+      ];
+      header('Location: login.php');
+      exit;
+   }
+
+   // Verify password
+   if (!password_verify($password, $row['password'])) {
+       $_SESSION['alert'] = [
+         'type' => 'error',
+         'message' => 'Incorrect email or password!'
+      ];
+      header('Location: login.php');
+      exit;
+   }
+
+   // Role → Redirect map
+   $roleRedirects = [
+      'admin' => 'admin_page.php',
+      'user' => 'index.php',
+      'cashier' => 'cashier_page.php',
+      'barista' => 'barista_page.php',
+   ];
+
+   // Store session with a consistent pattern
+   $role = strtolower($row['role']);
+   if (isset($roleRedirects[$role])) {
+      $_SESSION[$role . '_id'] = $row['id'];
+      $_SESSION[$role . '_name'] = $row['name'];
+      header('Location: ' . $roleRedirects[$role]);
+      exit;
+   }
+
+    $_SESSION['alert'] = [
+      'type' => 'error',
+      'message' => 'Unknown user role!'
+   ];
+   header('Location: login.php');
 }
 
 

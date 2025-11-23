@@ -1,67 +1,121 @@
 <?php
 include 'config.php';
+require 'services/mail.php';
 session_start();
-
 
 $alert = $_SESSION['alert'] ?? [];
 unset($_SESSION['alert']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
 
-    $name  = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-    $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-    $password  = $_POST['password'] ?? '';         
-    $confirm_password = $_POST['confirm_password'] ?? '';
-    $role  = isset($_POST['is_admin']) ? 'admin' : 'user';
+   // Sanitize Inputs
+   $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+   $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+   $password = $_POST['password'] ?? '';
+   $confirm_password = $_POST['confirm_password'] ?? '';
+   $role = isset($_POST['is_admin']) ? 'admin' : 'user';
+
+   // ============================================
+   // ✅ IMAGE UPLOAD FIX
+   // ============================================
+
+   $image_name = $_FILES['image']['name'] ?? '';
+   $image_size = $_FILES['image']['size'] ?? 0;
+   $image_tmp = $_FILES['image']['tmp_name'] ?? '';
+
+   $allowed_ext = ['jpg', 'jpeg', 'png', 'webp'];
+
+   $uploaded_image = null; // default (if no file is uploaded)
+
+   if (!empty($image_name) && is_uploaded_file($image_tmp)) {
+
+      // Extract file extension
+      $ext = strtolower(pathinfo($image_name, PATHINFO_EXTENSION));
+
+      if (!in_array($ext, $allowed_ext)) {
+         $_SESSION['alert'] = ['type' => 'error', 'message' => 'Invalid image format. Only JPG, PNG, WEBP allowed.'];
+         header("Location: register.php");
+         exit;
+      }
+
+      if ($image_size > 2 * 1024 * 1024) { // 2MB limit
+         $_SESSION['alert'] = ['type' => 'error', 'message' => 'Image size is too large! Limit: 2MB'];
+         header("Location: register.php");
+         exit;
+      }
+
+      // Generate unique filename
+      $uploaded_image = uniqid('IMG_', true) . "." . $ext;
+
+      // Ensure upload directory exists
+      $upload_dir = 'uploaded_img/';
+      if (!is_dir($upload_dir)) {
+         mkdir($upload_dir, 0777, true);
+      }
+
+      $image_path = $upload_dir . $uploaded_image;
+   }
 
 
-    $image_name = $_FILES['image']['name'] ?? '';
-    $image_size = $_FILES['image']['size'] ?? 0;
-    $image_tmp  = $_FILES['image']['tmp_name'] ?? '';
-    $image_name = basename(filter_var($image_name, FILTER_SANITIZE_FULL_SPECIAL_CHARS));
-    $image_path = 'uploaded_img/' . $image_name;
 
+   // Check email existence
+   $select = $conn->prepare("SELECT 1 FROM `users` WHERE email = ?");
+   $select->execute([$email]);
 
-    $select = $conn->prepare("SELECT 1 FROM `users` WHERE email = ?");
-    $select->execute([$email]);
-    if ($select->rowCount() > 0) {
-        $_SESSION['alert'] = ['type' => 'error', 'message' => 'Email already exists!'];
-        header("Location: register.php");
-        exit;
-    }
+   if ($select->rowCount() > 0) {
+      $_SESSION['alert'] = ['type' => 'error', 'message' => 'Email already exists!'];
+      header("Location: register.php");
+      exit;
+   }
 
+   // Password match validation
+   if ($password !== $confirm_password) {
+      $_SESSION['alert'] = ['type' => 'error', 'message' => 'Passwords do not match!'];
+      header("Location: register.php");
+      exit;
+   }
 
-    if ($password !== $confirm_password) {
-        $_SESSION['alert'] = ['type' => 'error', 'message' => 'Passwords do not match!'];
-        header("Location: register.php");
-        exit;
-    }
+   // Hash password
+   $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
+   // Insert user
+   $insert = $conn->prepare("
+        INSERT INTO `users` (name, email, password, image, role) 
+        VALUES (?, ?, ?, ?, ?)
+    ");
+   $insert->execute([$name, $email, $hashedPassword, $uploaded_image, $role]);
 
-    if ($image_size > 2000000) {
-        $_SESSION['alert'] = ['type' => 'error', 'message' => 'Image size is too large!'];
-        header("Location: register.php");
-        exit;
-    }
+   // Move uploaded file only after DB insert
+   if ($uploaded_image && is_uploaded_file($image_tmp)) {
+      move_uploaded_file($image_tmp, $image_path);
+   }
 
+   // Generate email verification code
+   $verification_code = bin2hex(random_bytes(6));
 
-    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+   // Send verification email
+   $message = sendVerificationEmail($email, $verification_code);
 
+   if ($message['status'] === 'error') {
+      $_SESSION['alert'] = ['type' => 'error', 'message' => $message['message']];
+      header("Location: register.php");
+      exit;
+   }
 
-    $insert = $conn->prepare("INSERT INTO `users` (name, email, password, image, role) VALUES (?, ?, ?, ?, ?)");
-    $insert->execute([$name, $email, $hashedPassword, $image_name, $role]);
+   // Save code to session
+   $_SESSION['verification_code'] = $verification_code;
 
+   $_SESSION['alert'] = [
+      'type' => 'success',
+      'message' => 'Registration successful! Please verify your email.'
+   ];
 
-    if ($insert && $image_tmp) {
-        move_uploaded_file($image_tmp, $image_path);
-    }
-
-
-    $_SESSION['alert'] = ['type' => 'success', 'message' => 'Registration successful! Please log in.'];
-    header('Location: login.php');
-    exit;
+   header('Location: verify.php?email=' . urlencode($email));
+   exit;
 }
 ?>
+
+
 
 
 
@@ -90,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
       </div>
 
       <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-         <form action="" method="POST" class="space-y-6">
+         <form action="" method="POST" enctype="multipart/form-data" class="space-y-6">
             <input type="hidden" name="submit" value="1">
             <div>
                <label for="name" class="block text-sm/6 font-medium text-gray-900">Name</label>
@@ -130,15 +184,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
                <div class="mt-2">
                   <input id="image" type="file" name="image" accept="image/jpg, image/jpeg, image/png"
                      class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6" />
-               
-            </div>
 
-            <div class="flex flex-col gap-3 mt-6">
-               <button type="submit"
-                  class="flex w-full justify-center rounded-md bg-color px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-                  Register
-               </button>
-            </div>
+               </div>
+
+               <div class="flex flex-col gap-3 mt-6">
+                  <button type="submit"
+                     class="flex w-full justify-center rounded-md bg-color px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                     Register
+                  </button>
+               </div>
          </form>
 
          <p class="mt-10 text-center text-sm/6 text-gray-500">
