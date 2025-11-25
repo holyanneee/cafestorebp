@@ -233,12 +233,29 @@ $isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Co
                                                     Cup Sizes:
                                                     <?php foreach ($product['cup_sizes'] as $size => $count): ?>
                                                         <?php if ($count > 0): ?>
-                                                            <span><?= htmlspecialchars(ucfirst($size)) ?>
-                                                                (<?= htmlspecialchars($count) ?>)</span>
+                                                            <span>
+                                                                <?= htmlspecialchars(ucfirst($size)) ?>
+                                                                (<?= htmlspecialchars($count) ?>)
+                                                            </span>
                                                         <?php endif; ?>
                                                     <?php endforeach; ?>
                                                 </div>
                                             <?php endif; ?>
+                                            <?php if ($order['type'] === 'coffee' && !empty($product['add_ons'])): ?>
+                                                <div class="text-sm text-gray-500 mt-1">
+                                                    Add-Ons:
+                                                    <?php foreach ($product['add_ons'] as $addOn): ?>
+                                                        <span>
+                                                            <?= htmlspecialchars($addOn['name']) ?>
+                                                            (₱ <?= number_format($addOn['price'], 2) ?>)
+                                                        </span>
+                                                    <?php endforeach; ?>
+                                                </div>
+
+                                            <?php endif; ?>
+
+                                            
+
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             ₱ <?= number_format($product['price'], 2) ?>
@@ -266,7 +283,7 @@ $isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Co
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 font-bold text-gray-900">
-                                        <?php $total = $order['total_price']?>
+                                        <?php $total = $order['total_price'] ?>
                                         <?php if ($order['method'] !== 'pick up'): ?>
                                             <span class="block">
                                                 ₱ <?= $order['delivery_fee'] ?>

@@ -129,7 +129,7 @@ $total_products = count($cart_items) + (array_sum(array_column($cart_items, 'qua
                   $total = 0;
                   foreach ($cart_items as $item):
                     $subtotal = $item['price'] * $item['quantity'];
-                    $total += $subtotal;
+              
                     $isTypeCoffee = $item['type'] === 'coffee';
                     if ($isTypeCoffee) {
                       $product_cup_sizes = isset($item['product_cup_sizes']) ? json_decode($item['product_cup_sizes'], true) : [];
@@ -141,10 +141,15 @@ $total_products = count($cart_items) + (array_sum(array_column($cart_items, 'qua
                       $add_ons = $stmt->fetchAll(PDO::FETCH_ASSOC);
                       $selected_add_ons = isset($item['add_ons']) ? json_decode($item['add_ons'], true) : [];
 
-
+                      $subtotal += $cup_size_price * $item['quantity'];
+                      foreach ($selected_add_ons as $add_on) {
+                        $subtotal += $add_on['price'] * $item['quantity'];
+                      }
 
                       $special_instructions = isset($item['special_instruction']) ? htmlspecialchars($item['special_instruction'], ENT_QUOTES) : '';
+                    
                     }
+                    $total += $subtotal;
                     ?>
                     <li class="flex items-center gap-4">
                       <img src="uploaded_img/<?= htmlspecialchars($item['image']); ?>"
