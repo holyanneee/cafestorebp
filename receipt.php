@@ -25,6 +25,7 @@ $select_orders = $conn->prepare("
         o.updated_by_barista,
         o.number,
         o.receipt,
+        op.add_ons,
         GROUP_CONCAT(op.product_id) AS product_ids,
         (SELECT SUM(op2.subtotal) FROM order_products op2 WHERE op2.order_id = o.id) AS total_price
     FROM orders o 
@@ -88,10 +89,24 @@ if (empty($order['receipt'])) {
     // var_dump($products_data); // Debugging line to check products data
     // Generate PDF
     require('fpdf/fpdf.php');
-    $pdf = new FPDF('P', 'mm', [90, 200]);
-    $pdf->AddPage();
-    $pdf->SetMargins(5, 5, 5);
+    $base_height = 100; // Base height for the header and footer
+    $product_height = 6; // Height per product line
+    $addon_height = 4; // Height per add-on line
+    
+    $total_height = $base_height;
+    foreach ($products_data as $product) {
+        $total_height += $product_height; // Add height for the product line
+        if (!empty($product['add_ons'])) {
+            $total_height += count($product['add_ons']) * $addon_height; // Add height for add-ons
+        }
+    }
+    
+    // Set a minimum height to avoid very small PDFs
+    $total_height = max($total_height, 200);
+    $pdf = new FPDF('P', 'mm', [80, $total_height]);
 
+    $pdf->AddPage();
+    
     $pdf->SetFont('Arial', 'B', 12);
     if ($order['type'] == 'coffee') {
         $pdf->Cell(0, 5, 'Kape Milagrosa', 0, 1, 'C');
@@ -118,21 +133,10 @@ if (empty($order['receipt'])) {
         $line .= str_pad('Php ' . number_format($product['price'], 2), 12, ' ', STR_PAD_LEFT);
         $pdf->Cell(0, 4, $line, 0, 1);
 
-        // Ingredients
-        if (!empty($product['ingredients'])) {
-            $pdf->SetFont('Courier', 'I', 8);
-            $pdf->Cell(0, 4, "  Ingredients:", 0, 1);
-            foreach ($product['ingredients'] as $ingredient) {
-                $pdf->Cell(0, 4, "    {$ingredient['name']} : {$ingredient['level']}", 0, 1);
-            }
-            $pdf->SetFont('Courier', '', 9);
-        }
-
         // Add-ons
         if (!empty($product['add_ons'])) {
-            $pdf->SetFont('Courier', 'I', 8);
-            $pdf->Cell(0, 4, "  Add-ons:", 0, 1);
             foreach ($product['add_ons'] as $addon) {
+                
                 $priceFormatted = number_format($addon['price'], 2);
                 $pdf->Cell(0, 4, "   {$addon['name']} (+{$priceFormatted})", 0, 1);
             }
