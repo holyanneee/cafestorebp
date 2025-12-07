@@ -25,7 +25,7 @@ $select_orders = $conn->prepare("
         o.updated_by_barista,
         o.number,
         o.receipt,
-        op.add_ons,
+
         GROUP_CONCAT(op.product_id) AS product_ids,
         (SELECT SUM(op2.subtotal) FROM order_products op2 WHERE op2.order_id = o.id) AS total_price
     FROM orders o 
@@ -36,6 +36,23 @@ $select_orders = $conn->prepare("
 $select_orders->execute([$order_id]);
 $order = $select_orders->fetch(PDO::FETCH_ASSOC);
 
+function calculateReceiptHeight($products_data)
+{
+    $line_height = 4;
+    $addon_height = 4;
+
+    $height = 40; // header + footer + gaps
+
+    foreach ($products_data as $product) {
+        $height += $line_height; // product line
+
+        if (!empty($product['add_ons'])) {
+            $height += count($product['add_ons']) * $addon_height;
+        }
+    }
+
+    return max($height, 100); // prevent too small height
+}
 
 if (!$order) {
     die('Order not found!');
@@ -86,27 +103,19 @@ if (empty($order['receipt'])) {
 
     }
 
-    // var_dump($products_data); // Debugging line to check products data
+
     // Generate PDF
     require('fpdf/fpdf.php');
-    $base_height = 100; // Base height for the header and footer
-    $product_height = 6; // Height per product line
-    $addon_height = 4; // Height per add-on line
-    
-    $total_height = $base_height;
-    foreach ($products_data as $product) {
-        $total_height += $product_height; // Add height for the product line
-        if (!empty($product['add_ons'])) {
-            $total_height += count($product['add_ons']) * $addon_height; // Add height for add-ons
-        }
-    }
-    
-    // Set a minimum height to avoid very small PDFs
-    $total_height = max($total_height, 200);
-    $pdf = new FPDF('P', 'mm', [80, $total_height]);
+
+
+
+    $total_height = calculateReceiptHeight($products_data);
+
+    $pdf = new FPDF('P', 'mm', array(100, $total_height));
 
     $pdf->AddPage();
-    
+
+
     $pdf->SetFont('Arial', 'B', 12);
     if ($order['type'] == 'coffee') {
         $pdf->Cell(0, 5, 'Kape Milagrosa', 0, 1, 'C');
@@ -136,7 +145,7 @@ if (empty($order['receipt'])) {
         // Add-ons
         if (!empty($product['add_ons'])) {
             foreach ($product['add_ons'] as $addon) {
-                
+
                 $priceFormatted = number_format($addon['price'], 2);
                 $pdf->Cell(0, 4, "   {$addon['name']} (+{$priceFormatted})", 0, 1);
             }
@@ -147,7 +156,7 @@ if (empty($order['receipt'])) {
 
 
     $pdf->Ln(2);
-    $pdf->Cell(0, 0, str_repeat('-', 50), 0, 1);
+    $pdf->Cell(0, 0, str_repeat('-', 40), 0, 1);
     $pdf->Ln(1);
     $pdf->SetFont('Courier', 'B', 9);
     $line = str_pad('TOTAL:', 20);
@@ -159,7 +168,7 @@ if (empty($order['receipt'])) {
     $pdf->Cell(0, 4, 'Thank you for your purchase!', 0, 1, 'C');
     $pdf->Cell(0, 4, 'Please visit us again.', 0, 1, 'C');
     $pdf->Cell(0, 4, 'Inquiries: 09058774385', 0, 1, 'C');
-
+    $pdf->SetAutoPageBreak(true, 5);
     $receipts_dir = 'receipts/';
     if (!is_dir($receipts_dir)) {
         mkdir($receipts_dir, 0755, true);
