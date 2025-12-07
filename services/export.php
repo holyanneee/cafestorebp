@@ -78,4 +78,38 @@ function backupDatabase(PDO $conn, $databaseName, $outputFile = null)
         "file" => $outputFile
     ];
 }
+function restoreDatabase(PDO $conn, $filePath)
+{
+    if (!file_exists($filePath)) {
+        return ['status' => 'error', 'message' => 'Backup file not found.'];
+    }
+
+    // Read SQL file
+    $sql = file_get_contents($filePath);
+    if (!$sql) {
+        return ['status' => 'error', 'message' => 'Failed to read backup file.'];
+    }
+
+    try {
+        // Disable foreign key checks
+        $conn->exec("SET FOREIGN_KEY_CHECKS = 0;");
+
+        // Split SQL commands by semicolon
+        $queries = array_filter(array_map('trim', explode(";", $sql)));
+
+        foreach ($queries as $query) {
+            if (!empty($query)) {
+                $conn->exec($query);
+            }
+        }
+
+        // Enable foreign key checks
+        $conn->exec("SET FOREIGN_KEY_CHECKS = 1;");
+        
+        return ['status' => 'success', 'message' => 'Database restored successfully.'];
+        
+    } catch (PDOException $e) {
+        return ['status' => 'error', 'message' => $e->getMessage()];
+    }
+}
 ?>

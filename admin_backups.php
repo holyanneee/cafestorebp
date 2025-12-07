@@ -64,6 +64,34 @@ if (isset($_GET['backup'])) {
     }
 }
 
+if (isset($_GET['restore'])) {
+
+
+    // Get file path from latest backup base on date today
+    $selectLatestBackup = $conn->prepare("SELECT * FROM `backups` WHERE created_at >= CURDATE() ORDER BY created_at DESC LIMIT 1");
+    $selectLatestBackup->execute();
+    $latestBackup = $selectLatestBackup->fetch(PDO::FETCH_ASSOC);
+
+    if (!$latestBackup) {
+        $_SESSION['alert'] = ['type' => 'warning', 'message' => 'No backup found for today to restore.'];
+        header('Location: admin_backups.php');
+        exit;
+    }
+
+    $file = $latestBackup['file_path'];
+
+    // Restore database
+    $result = restoreDatabase($conn, $file);
+
+    $_SESSION['alert'] = [
+        'type' => $result['status'],
+        'message' => $result['message']
+    ];
+
+    header('Location: admin_backups.php');
+    exit;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -299,6 +327,11 @@ if (isset($_GET['backup'])) {
                                     <i class="fas fa-database fa-sm fa-fw mr-2 text-gray-400"></i>
                                     Create New Backup
                                 </a>
+                                <!-- restore latest backup -->
+                                 <a href="admin_backups.php?restore=1" class="btn btn-sm btn-success">
+                                    <i class="fas fa-upload fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    Restore Latest Backup
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -327,6 +360,7 @@ if (isset($_GET['backup'])) {
                                                 <th>File Name</th>
                                                 <th>Size</th>
                                                 <th>Date</th>
+                                                <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -335,13 +369,15 @@ if (isset($_GET['backup'])) {
                                                     <tr>
 
                                                         <td>
-                                                            <a href="backups/<?= $backup['file_name'] ?>" download>
-                                                                <?= $backup['file_name'] ?>
-                                                            </a>
+                                                            <?= $backup['file_name'] ?>
                                                         </td>
                                                         <td><?= $backup['size_mb'] ?> MB</td>
                                                         <td><?= date('Y-m-d H:i:s', strtotime($backup['created_at'])) ?></td>
-
+                                                        <td>
+                                                            <a href="backups/<?= $backup['file_name'] ?>" download
+                                                                class="btn btn-sm btn-view">Download
+                                                            </a>
+                                                        </td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                             <?php else: ?>

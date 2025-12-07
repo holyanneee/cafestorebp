@@ -254,8 +254,6 @@ $isOrderCompleted = $order && ($order['status']['value'] === OrderStatusEnum::Co
 
                                             <?php endif; ?>
 
-                                            
-
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             ₱ <?= number_format($product['price'], 2) ?>
