@@ -38,7 +38,7 @@ $order = $select_orders->fetch(PDO::FETCH_ASSOC);
 
 function calculateReceiptHeight($products_data)
 {
-    $line_height = 4;
+    $line_height = 10;
     $addon_height = 4;
 
     $height = 40; // header + footer + gaps
@@ -51,7 +51,7 @@ function calculateReceiptHeight($products_data)
         }
     }
 
-    return max($height, 100); // prevent too small height
+    return max($height, 105); // prevent too small height
 }
 
 if (!$order) {
@@ -168,7 +168,7 @@ if (empty($order['receipt'])) {
     $pdf->Cell(0, 4, 'Thank you for your purchase!', 0, 1, 'C');
     $pdf->Cell(0, 4, 'Please visit us again.', 0, 1, 'C');
     $pdf->Cell(0, 4, 'Inquiries: 09058774385', 0, 1, 'C');
-    $pdf->SetAutoPageBreak(true, 5);
+    // $pdf->SetAutoPageBreak(true, 5);
     $receipts_dir = 'receipts/';
     if (!is_dir($receipts_dir)) {
         mkdir($receipts_dir, 0755, true);
